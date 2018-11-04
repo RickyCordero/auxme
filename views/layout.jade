@@ -1,0 +1,170 @@
+doctype html
+html(lang='en')
+  head
+    title Welcome
+    //- link(href='/stylesheets/bootstrap.css', rel='stylesheet')
+    //- link(href='/stylesheets/style.css', rel='stylesheet')
+    //- Compiled and minified CSS
+    link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css")
+
+
+    //- google fonts
+    link(href='https://fonts.googleapis.com/css?family=Comfortaa' rel='stylesheet')
+
+    //- Compiled and minified JavaScript
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js")
+            
+    script(src='https://code.jquery.com/jquery-3.3.1.min.js')
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js")
+    script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js")
+    style.
+      .flex-container{
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .flex-container .card {
+        flex: 0 0 auto;
+      }
+      .flex-container > div {
+        background-color: #f1f1f1;
+        margin: 10px;
+        padding: 20px;
+        font-size: 30px;
+        cursor: pointer;
+      }
+      /* The snackbar - position it at the bottom and in the middle of the screen */
+      #snackbar {
+          visibility: hidden; /* Hidden by default. Visible on click */
+          min-width: 250px; /* Set a default minimum width */
+          margin-left: -125px; /* Divide value of min-width by 2 */
+          background-color: #333; /* Black background color */
+          color: #fff; /* White text color */
+          text-align: center; /* Centered text */
+          border-radius: 2px; /* Rounded borders */
+          padding: 16px; /* Padding */
+          position: fixed; /* Sit on top of the screen */
+          z-index: 1; /* Add a z-index if needed */
+          left: 50%; /* Center the snackbar */
+          bottom: 30px; /* 30px from the bottom */
+      }
+
+      /* Show the snackbar when clicking on a button (class added with JavaScript) */
+      #snackbar.show {
+          visibility: visible; /* Show the snackbar */
+          /* Add animation: Take 0.5 seconds to fade in and out the snackbar. 
+        However, delay the fade out process for 2.5 seconds */
+        -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        animation: fadein 0.5s, fadeout 0.5s 2.5s;
+      }
+
+      /* Animations to fade the snackbar in and out */
+      @-webkit-keyframes fadein {
+          from {bottom: 0; opacity: 0;} 
+          to {bottom: 30px; opacity: 1;}
+      }
+
+      @keyframes fadein {
+          from {bottom: 0; opacity: 0;}
+          to {bottom: 30px; opacity: 1;}
+      }
+
+      @-webkit-keyframes fadeout {
+          from {bottom: 30px; opacity: 1;} 
+          to {bottom: 0; opacity: 0;}
+      }
+
+      @keyframes fadeout {
+          from {bottom: 30px; opacity: 1;}
+          to {bottom: 0; opacity: 0;}
+      }
+      /* ---- reset ---- */
+
+      body {
+        background-color: grey;
+        margin: 0;
+        /*  */
+        background: linear-gradient(-45deg, rgba(0,0,0,0.5), rgba(255,255,255, 0.5), rgba(0,0,0,1), rgba(10,10,10, 0.5));
+        background-size: 400% 400%;
+        animation: Gradient 60s ease infinite;
+        font-family: 'Comfortaa', sans-serif;
+      }
+      canvas {
+        display: block;
+      }
+
+      /* ---- particles.js container ---- */
+
+      #particles {
+        position: absolute;
+        z-index: -1;
+        width: 100%;
+        height: 100%;
+        /* background-color: #232741; */
+        background-repeat: no-repeat;
+        background-size: 100%;
+        background-position: 0% 0%;
+      }
+      nav{
+        background-color: grey;
+        /*  */
+        background: linear-gradient(-45deg, rgba(0,0,0,0.5), rgba(255,255,255, 0.5), rgba(0,0,0,1), rgba(10,10,10, 0.5));
+        background-size: 400% 400%;
+        animation: Gradient 60s ease infinite;
+      }
+      .result-add{
+        cursor:pointer;
+      }
+      #auxme-logo{
+        font-family: 'Comfortaa', sans-serif;
+      }
+  body
+    nav.nav-wrapper
+    
+      a(href="/" id="auxme-logo" class="brand-logo" style="padding-left:10px") AuxMe
+      //- a(href="/" class="waves-effect waves-teal btn-flat") AuxMe
+      ul(id="nav-mobile" class="right hide-on-med-and-down")
+        if user
+          li(class=(title == 'Members' ? 'active' : ''))
+            a(href='/') Members
+          li(class=(title == 'Spotify' ? 'active' : ''))
+            a(href='/spotify') Spotify
+        if !user
+          li(class=(title == 'Register' ? 'active' : ''))
+            a(href='/users/register') Register
+          li(class=(title == 'Login' ? 'active' : ''))
+            a(href='/users/login') Login
+    #particles
+    //- particles.js lib - https://github.com/VincentGarreau/particles.js
+    script(src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js")
+    //- particles javascript file
+    script(src="/javascripts/particles.js" type="text/javascript")
+    //- .navbar.navbar-default(role='navigation')
+    //-   .container
+    //-     .navbar-header
+    //-       button.navbar-toggle(type='button', data-toggle='collapse', data-target='.navbar-collapse')
+    //-         span.sr-only Toggle navigation
+    //-         span.icon-bar
+    //-         span.icon-bar
+    //-         span.icon-bar
+    //-       a.navbar-brand(href='/') AuxMe
+    //-     .navbar-collapse.collapse
+    //-       ul.nav.navbar-nav
+    //-         if user
+    //-          li(class=(title == 'Members' ? 'active' : ''))
+    //-            a(href='/') Members
+    //-          li(class=(title == 'Spotify' ? 'active' : ''))
+    //-            a(href='/spotify') Spotify
+    //-         if !user
+    //-          li(class=(title == 'Register' ? 'active' : ''))
+    //-            a(href='/users/register') Register
+    //-          li(class=(title == 'Login' ? 'active' : ''))
+    //-            a(href='/users/login') Login
+    //-       ul.nav.navbar-nav.navbar-right
+    //-        if user
+    //-         li
+    //-            a(href='/users/logout') Logout
+    .container
+      != messages()
+      block content
