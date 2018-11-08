@@ -2,13 +2,9 @@ extends layout
 
 block content
   if loggedIn
-    div(style="display: flex; margin: 0 auto;")
-      div(class="secondary-content" id="scrollLeft")
-        i(class="material-icons") arrow_back
-      #queue-container
-      div(class="secondary-content" id="scrollRight")
-        i(class="material-icons") arrow_forward
-    div(style="display: flex; width: 50%; margin: 0 auto;")
+    #queue-container
+      #queue-items
+    #playback-buttons
       a(class="btn-floating btn-large waves-effect waves-light black" id="previous")
         i(class="material-icons") fast_rewind
       a(class="btn-floating btn-large waves-effect waves-light black" id="play_pause")
@@ -32,6 +28,7 @@ block content
     button(class="btn btn-default" id="show-playlists") Show playlists
     button(class="btn btn-default" id="clearqueue") Clear queue
     #playlist-container
+      #playlist-items
     #search_results.collection
     //- p Success, you have logged in!
     //- p Access token: #{access_token}
@@ -93,17 +90,21 @@ block content
                   const imageUrl = playlist.images[0].url;
                   //- console.log(imageUrl);
                   const playlistHtml = `
-                  <div class="card small playlist-container" id="playlist_${idx}">
+                  <div class="card small playlist-items" id="playlist_${idx}">
                     <div class="card-image playlist-image">
                       <img src="${imageUrl}">
                     </div>
                     <div class="card-content playlist-title">${name}</div>
                   </div>
                   `;
-                  $('#playlist-container').append(playlistHtml);
+                  $('#playlist-items').append(playlistHtml);
+                } else {
+                  console.log('yo, the playlist has no images');
                 }
               });
+              $("#playlist-container").slideToggle();
             });
+
           });
 
           const updateSnackbar = message => {
@@ -114,12 +115,12 @@ block content
           };
 
           const renderQueue = () => {
-            $('#queue-container').empty();
+            $('#queue-items').empty();
             $.get('/spotify/getqueue', (queueData, queueStatus)=>{
               queueData.queue.forEach((queueItem, queueIdx)=>{
                 const tile = `
-                <div class="card small waves-effect waves-light" id="track_${queueIdx}">
-                  <div class="card-image">
+                <div class="card small">
+                  <div class="card-image waves-effect waves-light" id="track_${queueIdx}">
                     <img src="${queueItem.imageUrl}">
                     <span class="card-title card-title-custom">${queueItem.artists}</span>
                   </div>
@@ -128,7 +129,7 @@ block content
                   </div>
                 </div>
                 `;
-                $('#queue-container').append(tile);
+                $('#queue-items').append(tile);
                 $(`#track_${queueIdx}`).on('click', event=>{
                   updateSnackbar(`Playing ${queueItem.name}`);
                   $.get('/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
@@ -272,20 +273,6 @@ block content
             } else {
               $('#search_results').empty();
             }
-          });
-
-          document.getElementById('scrollLeft')
-          .addEventListener('mouseover', event => {
-            $('#queue-container').animate({
-              scrollLeft: "-=300px"
-            }, "slow");
-          });
-
-          document.getElementById('scrollRight')
-          .addEventListener('mouseover', event => {
-            $('#queue-container').animate({
-              scrollLeft: "+=300px"
-            }, "slow");
           });
 
           //- document.getElementById('obtain-new-token')

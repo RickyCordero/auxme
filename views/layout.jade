@@ -1,7 +1,7 @@
 doctype html
 html(lang='en')
   head
-    title Welcome
+    title AuxMe
     //- link(href='/stylesheets/bootstrap.css', rel='stylesheet')
     //- link(href='/stylesheets/style.css', rel='stylesheet')
     //- Compiled and minified CSS
@@ -51,28 +51,26 @@ html(lang='en')
       ::-webkit-scrollbar-corner {
         background: transparent;
       }
-      /*
-      .queue-container .card {
-        flex: 0 0 auto;
-        width: 300px;
-        height: 300px;
-      } */
       #queue-container{
+        display: flex;
+        margin: 0 auto;
+      }
+      #queue-items{
         display: flex;
         flex-wrap: nowrap;
         overflow-x: scroll;
         -webkit-overflow-scrolling: touch;
       }
-      #queue-container > div {
+      #queue-items > div {
         background-color: #f1f1f1;
         margin: 10px;
         padding: 20px;
         font-size: 30px;
-        cursor: pointer;
       }
       .card-image{
         height: 200px;
         width: 200px;
+        cursor: pointer;
       }
       .card-title-custom{
         font-size: 12px !important;
@@ -81,23 +79,24 @@ html(lang='en')
         font-size: 20px !important;
         width: 200px;
       }
+      #playback-buttons{
+        text-align: center;
+      }
       #playlist-container{
+        display: none; /* initially hidden then toggled */
+      }
+      #playlist-items{
         display: flex;
         flex-wrap: nowrap;
         overflow-x: scroll;
         -webkit-overflow-scrolling: touch;
       }
-      #playlist-container > div {
+      #playlist-items > div {
         background-color: #f1f1f1;
         margin: 10px;
         padding: 20px;
         font-size: 30px;
         cursor: pointer;
-      }
-      #modal1{
-        z-index: 2;
-        position: absolute; /* or absolute */
-        top: 25%;
       }
       #scrollLeft{
         vertical-align: middle;

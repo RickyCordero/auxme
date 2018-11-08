@@ -117,6 +117,7 @@ router.get('/callback', ensureAuthenticated, function (req, res, next) {
         // get the access and refresh tokens using the resultant code from the callback response
         request.post(authOptions, function (error, response, body) {
             if (!error && response.statusCode === 200) {
+                // TODO: Figure out how to store these tokens per user per session
                 global_access_token = body.access_token;
                 global_refresh_token = body.refresh_token;
                 loggedIn = true;
@@ -485,8 +486,6 @@ router.get('/myplaylists', ensureAuthenticated, function (req, res) {
     spotifyApi
     .getUserPlaylists()
     .then(data=>{
-        console.log('got my playlists!');
-        console.log(data);
         res.send({data:data});
     })
     .catch(error=>{
