@@ -1,4 +1,11 @@
 const express = require('express');
+const socketIO = require('socket.io');
+
+const app = express();
+
+const io = socketIO();
+app.io = io;
+
 const path = require('path');
 const favicon = require('serve-favicon');
 const logger = require('morgan');
@@ -12,16 +19,19 @@ const multer = require('multer');
 const upload = multer({ dest: './uploads' });
 const flash = require('connect-flash');
 const bcrypt = require('bcryptjs');
+
 const mongo = require('mongodb');
 const mongoose = require('mongoose');
 const db = mongoose.connection;
 
 // import routes
-const routes = require('./routes/index');
-const users = require('./routes/users');
-const spotify = require('./routes/spotify');
+const routes = require('./routes/index')(io);
+const users = require('./routes/users')(io);
+const spotify = require('./routes/spotify')(io);
 
-const app = express();
+io.on('connection', function (socket) {
+  console.log('a user has connected in app.js');
+});
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -36,8 +46,8 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // Handle Sessions
 app.use(session({
   secret: 'secret',
-  saveUninitialized: true,
-  resave: true
+  saveUninitialized: true, // should this be false?
+  resave: true // should this be false?
 }));
 
 // Passport

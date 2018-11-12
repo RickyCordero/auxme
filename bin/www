@@ -4,22 +4,22 @@
  * Module dependencies.
  */
 
-var app = require('../app');
-var debug = require('debug')('nodeauth:server');
-var http = require('http');
+const app = require('../app');
+const debug = require('debug')('nodeauth:server');
+const http = require('http');
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3000');
+const port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
 /**
  * Create HTTP server.
  */
 
-var server = http.createServer(app);
+const server = http.createServer(app);
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -28,6 +28,20 @@ var server = http.createServer(app);
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
+
+/**
+ * Socket.io
+ */
+const io = app.io;
+// console.log('in www');
+// console.log('app.io (socket server) ----------------------');
+// console.log(io);
+// console.log('---------------------------------------------');
+io.attach(server);
+// console.log('app.io (socket server) ----------------------');
+// console.log(io);
+// TODO: Figure out how to fix the socket error on the front end console
+// io.listen(server);
 
 
 /**
