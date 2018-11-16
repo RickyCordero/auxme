@@ -64,13 +64,13 @@ module.exports = function (io) {
     const username = req.body.username;
     const password = req.body.password;
     const password2 = req.body.password2;
-
+    let profileimage;
     if (req.file) {
       console.log('Uploading File...');
-      const profileimage = req.file.filename;
+      profileimage = req.file.filename;
     } else {
       console.log('No File Uploaded...');
-      const profileimage = 'noimage.jpg';
+      profileimage = 'noimage.jpg';
     }
 
     // Form Validator

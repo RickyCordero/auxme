@@ -61,11 +61,22 @@ function ensureSpotifyAuthenticated(req, res, next){
 module.exports = function (io) {
 
     io.on('connection', function (socket) {
-        console.log('a user has connected to the spotify page');
+        socket.on('user-join', data => {
+            console.log('a user has connected to the spotify page');
+            console.log(data);
+            socket.emit('ack', {yo: 'this is the acknowledgement'});
+        });
+        socket.on('got-token', data => {
+            console.log('got the access token');
+            console.log(data);
+            socket.emit('ack', {token: data});
+        });
     });
     
     /* GET home page. */
     router.get('/', ensureSpotifyAuthenticated, function (req, res, next) {
+        // Check if spotify cookie exists
+        console.log(res.cookies);
         res.render('spotify', { title: 'Spotify', access_token: global_access_token, refresh_token: global_refresh_token });
     });
 
@@ -128,11 +139,12 @@ module.exports = function (io) {
         const storedState = req.cookies ? req.cookies[stateKey] : null;
 
         if (state === null || state !== storedState) {
-            res.redirect('/#' +
-                queryString.stringify({
-                    error: 'state_mismatch'
-                })
-            );
+            // res.redirect('/#' +
+            //     queryString.stringify({
+            //         error: 'state_mismatch'
+            //     })
+            // );
+            res.redirect('/spotify/login');
         } else {
             res.clearCookie(stateKey);
             const authOptions = {

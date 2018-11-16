@@ -5,11 +5,11 @@ block content
   #queue-container
     #queue-items
   #playback-buttons
-    button(class="btn-floating waves-effect waves-light white btn-flat" id="previous")
+    button(class="waves-effect btn-flat" id="previous")
       i(class="material-icons icon-black") fast_rewind
-    button(class="btn-floating waves-effect waves-light white btn-flat" id="play_pause")
+    button(class="waves-effect btn-flat" id="play_pause")
       i(class="material-icons icon-black" id="play_pause_image") play_arrow 
-    button(class="btn-floating waves-effect waves-light white btn-flat" id="next")
+    button(class="waves-effect btn-flat" id="next")
       i(class="material-icons icon-black") fast_forward
     //- button(class="btn btn-default" id="previous") Previous
     //- button(class="btn btn-default" id="play_pause") Play/Pause
@@ -21,6 +21,7 @@ block content
   button(class="waves-effect btn-flat" id="show-players") Show players
   button(class="waves-effect btn-flat" id="show-playlists") Show playlists
   button(class="waves-effect btn-flat" id="clearqueue") Clear queue
+  button(class="waves-effect btn-flat" id="trigger") Trigger
   #playlist-container
     #playlist-items
   #search_results.collection
@@ -39,19 +40,30 @@ block content
   script(src="https://sdk.scdn.co/spotify-player.js")
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js")
   script.
-    const socket = io.connect('http://localhost:3000/spotify');
-    socket.on('connection', data=>{
-      //- console.log(data);
-      socket.emit('player-join', {my:'data'});
+    // Tell Socket.io client to connect to the '/spotfy' namespace
+    const socketIO = io.connect('http://localhost:3000/');
+    socketIO.on('connect', socket => {
+      console.log('a user has connected Ricky')
+      //- socketIO.emit('user-join', {my: "data"});
     });
-  script.
-    let allUsers = [];
+
+    $('#trigger').on('click', event => {
+      socketIO.emit('user-join', {my: "data"});
+    });
+    
+    socketIO.on('ack', data => {
+      console.log('got the acknowledgement');
+      console.log(data);
+    });
+
     window.onSpotifyWebPlaybackSDKReady = () => {
       // authenticate the client Spotify web api
       // get token via back end using authorization code flow
       $.get('/spotify/access_token', function(data, status){
       //- $.get('/spotify/all_users', function(data, status){
+
         const token = data.access_token;
+        socketIO.emit('got-token', {token: data.access_token});
         //- const tokens = data.tokens;
         //- const token = tokens[0];
 
@@ -175,7 +187,7 @@ block content
         };
 
         const renderQueue = () => {
-          console.log('rendering queue');
+          //- console.log('rendering queue');
           $('#queue-items').empty();
           $.get('/spotify/getqueue', (queueData, queueStatus)=>{
             let g = new Promise((resolve, reject)=>{
@@ -207,27 +219,6 @@ block content
                   resolve(null);
                 }
               });
-              //- queueData.queue.forEach((queueItem, queueIdx)=>{
-              //-   const tile = `
-              //-   <div class="card small">
-              //-     <div class="card-image waves-effect waves-light" id="track_${queueIdx}">
-              //-       <img src="${queueItem.imageUrl}">
-              //-       <span class="card-title card-title-custom">${queueItem.artists}</span>
-              //-     </div>
-              //-     <div class="card-content card-content-custom">
-              //-       <p>${queueItem.name}</p>
-              //-     </div>
-              //-   </div>
-              //-   `;
-              //-   $('#queue-items').append(tile);
-              //-   $(`#track_${queueIdx}`).on('click', event=>{
-              //-     updateSnackbar(`Playing ${queueItem.name}`);
-              //-     $.get('/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
-              //-       document.title = queueItem.name;
-              //-     });
-              //-   });
-
-              //- });
             });
             g.then(res=>{
               //- cb(res);
@@ -382,7 +373,7 @@ block content
               console.log(data);
               if(Object.keys(data.data.body).length && data.data.body.is_playing){
                 console.log('render pause button');
-                $('#play_pause_image').text('pause_circle_filled');
+                $('#play_pause_image').text('pause');
                 // render pause button
               } else {
                 console.log('render play button');

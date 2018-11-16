@@ -29,9 +29,9 @@ const routes = require('./routes/index')(io);
 const users = require('./routes/users')(io);
 const spotify = require('./routes/spotify')(io);
 
-io.on('connection', function (socket) {
-  console.log('a user has connected in app.js');
-});
+// io.on('connection', function (socket) {
+//   console.log('a user has connected in app.js');
+// });
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

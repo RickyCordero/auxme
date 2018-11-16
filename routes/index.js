@@ -10,9 +10,9 @@ function ensureAuxMeAuthenticated(req, res, next) {
 
 module.exports = function (io) {
 
-    io.on('connection', function (socket) {
-        console.log('a user has connected to index');
-    });
+    // io.on('connection', function (socket) {
+    //     console.log('a user has connected to index');
+    // });
 
     /* GET home page. */
     router.get('/', function (req, res, next) {
