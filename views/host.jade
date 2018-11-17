@@ -22,33 +22,96 @@ block content
   button(class="waves-effect btn-flat" id="show-playlists") Show playlists
   button(class="waves-effect btn-flat" id="clearqueue") Clear queue
   button(class="waves-effect btn-flat" id="trigger") Trigger
+  button(class="waves-effect btn-flat" id="obtain-new-token") Refresh token
   #playlist-container
     #playlist-items
   #search_results.collection
-  //- p Success, you have logged in!
-  //- p Access token: #{access_token}
-  //- p Refresh token: #{refresh_token}
-  //- h1 Spotify Web Playback SDK Quick Start Tutorial
-  //- h2 Open your console log: 
-  //- code View > Developer > JavaScript Console
-  //- #loggedin
-  //- #user-profile
-  //- #oauth
-  //- button(class="btn btn-default" id="obtain-new-token") Obtain new token using the refresh token
   #snackbar
   link(href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet")
   script(src="https://sdk.scdn.co/spotify-player.js")
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js")
   script.
-    // Tell Socket.io client to connect to the '/spotfy' namespace
+
+    let deviceId;
+    let token;
+    // Tell Socket.io client to connect to the '/spotify' namespace
     const socketIO = io.connect('http://localhost:3000/');
+
+    const updateSnackbar = message => {
+      const snackbar = document.getElementById("snackbar");
+      snackbar.className = "show";
+      snackbar.innerHTML = message;
+      setTimeout(function(){snackbar.className=snackbar.className.replace('show', "");}, 3000);
+    };
+
+    const updatePlayback = () => {
+      setTimeout(()=>{
+        $.get('/host/spotify/playback-state', (data, status) => {
+          console.log("here's the current playback state");
+          console.log(data);
+          if(Object.keys(data.data.body).length && data.data.body.is_playing){
+            console.log('render pause button');
+            $('#play_pause_image').text('pause');
+            // render pause button
+          } else {
+            console.log('render play button');
+            $('#play_pause_image').text('play_arrow');
+            //- render play button
+          }
+        });              
+      }, 500); // WAIT HALF A SECOND TO GET STATE
+      console.log('Play/paused!');
+    };
+
+    const renderQueue = () => {
+      //- console.log('rendering queue');
+      $('#queue-items').empty();
+      $.get('/host/getqueue', (queueData, queueStatus)=>{
+        let g = new Promise((resolve, reject)=>{
+          async.forEachOf(queueData.queue, (queueItem, queueIdx)=>{
+            const tile = `
+            <div class="card small">
+              <div class="card-image waves-effect waves-light" id="track_${queueIdx}">
+                <img src="${queueItem.imageUrl}">
+                <span class="card-title card-title-custom">${queueItem.artists}</span>
+              </div>
+              <div class="card-content card-content-custom">
+                <p>${queueItem.name}</p>
+              </div>
+            </div>
+            `;
+            $('#queue-items').append(tile);
+            $(`#track_${queueIdx}`).on('click', event=>{
+              //- console.log('this is the value of token:'+token);
+              //- console.log('this is the value of deviceId:'+deviceId);
+              socketIO.emit('update-snackbar', {message:`Playing ${queueItem.name}`});
+              $.get('/host/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
+                document.title = queueItem.name;
+              });
+              //- Change the playback button state
+              updatePlayback();
+            });
+          }, function(err){
+            if(err){
+              reject(err);
+            } else {
+              resolve(null);
+            }
+          });
+        });
+        g.then(res=>{
+          //- cb(res);
+        });
+      });
+    };
+
     socketIO.on('connect', socket => {
       console.log('a user has connected Ricky')
       //- socketIO.emit('user-join', {my: "data"});
     });
 
     $('#trigger').on('click', event => {
-      socketIO.emit('user-join', {my: "data"});
+      socketIO.emit('user-join', {id: 'this is a fake id'});
     });
     
     socketIO.on('ack', data => {
@@ -56,13 +119,25 @@ block content
       console.log(data);
     });
 
+    socketIO.on('render-queue', data => {
+      console.log('going to render the queue using socket.io');
+      console.log(data);
+      renderQueue();
+    });
+
+    socketIO.on('update-snackbar', message => {
+      console.log('going to update the snackbar using socket.io');
+      console.log(message);
+      updateSnackbar(message);
+    });
+
     window.onSpotifyWebPlaybackSDKReady = () => {
       // authenticate the client Spotify web api
       // get token via back end using authorization code flow
-      $.get('/spotify/access_token', function(data, status){
+      $.get('/host/spotify/access_token', function(data, status){
       //- $.get('/spotify/all_users', function(data, status){
 
-        const token = data.access_token;
+        token = data.access_token;
         socketIO.emit('got-token', {token: data.access_token});
         //- const tokens = data.tokens;
         //- const token = tokens[0];
@@ -88,7 +163,7 @@ block content
           // TODO: Need to test this
           console.log('yo, there was an auth error');
           //- console.error(message);
-          $.get('/spotify/refresh_token', (data, status)=>{
+          $.get('/host/spotify/refresh_token', (data, status)=>{
             token = data.token;
             alert('got a new token:', token);
           });
@@ -97,15 +172,15 @@ block content
         player.addListener('playback_error', ({ message }) => {
           console.error(message);
           console.log('trying to start at beginning of queue');
-          $.get('/spotify/getqueue', (queueData, status)=>{
-            updateSnackbar(`Playing ${queueData.queue[0].name}`);
+          $.get('/host/getqueue', (queueData, status)=>{
+            socketIO.emit('update-snackbar', {message:`Playing ${queueData.queue[0].name}`});
             const payload = {
               uri: queueData.queue[0].uri,
               device_id: deviceId,
               access_token: token
             };
             
-            $.get('/spotify/play', payload, (playData, playStatus) => {
+            $.get('/host/spotify/play', payload, (playData, playStatus) => {
               document.title = queueData.queue[0].name;
             });
             
@@ -116,7 +191,7 @@ block content
         });
 
         $('#show-players').on('click', event => {
-          $.get('/spotify/getplayers', (data, status)=>{
+          $.get('/host/getplayers', (data, status)=>{
             console.log(data);
             $('#players-list').empty();
             data.players.forEach((player, playerId)=>{
@@ -135,7 +210,7 @@ block content
           const speed = 500;
           if(!$('#playlist-container').is(':visible')){
             $('#playlist-items').empty();
-            $.get('/spotify/myplaylists', (playlistData, status) => {
+            $.get('/host/spotify/myplaylists', (playlistData, status) => {
               const playlists = playlistData.data.body.items;
               playlists.forEach((playlist, playlistIdx) => {
                 if(playlist.images.length > 0){
@@ -149,7 +224,7 @@ block content
                   `;
                   $('#playlist-items').append(playlistItemHtml);
                   $(`#playlist_${playlistIdx}`).on('click', function(event){
-                    $.get('/spotify/playlist-tracks', { playlist_id : playlist.id }, (playlistTracksData, status) => {
+                    $.get('/host/spotify/playlist-tracks', { playlist_id : playlist.id }, (playlistTracksData, status) => {
                       const playlistTracks = playlistTracksData.tracks;
                       playlistTracks.forEach((playlistTrack, trackIdx) => {
                         const track = playlistTrack.track;
@@ -166,7 +241,8 @@ block content
                         };
                         pushQueue(payload);
                       });
-                      renderQueue();
+                      //- renderQueue();
+                      socketIO.emit('render-queue');
                     });
                   });
                 } else {
@@ -179,94 +255,52 @@ block content
           $("#playlist-container").slideToggle(speed);
         });
 
-        const updateSnackbar = message => {
-          const snackbar = document.getElementById("snackbar");
-          snackbar.className = "show";
-          snackbar.innerHTML = message;
-          setTimeout(function(){snackbar.className=snackbar.className.replace('show', "");}, 3000);
-        };
-
-        const renderQueue = () => {
-          //- console.log('rendering queue');
-          $('#queue-items').empty();
-          $.get('/spotify/getqueue', (queueData, queueStatus)=>{
-            let g = new Promise((resolve, reject)=>{
-              async.forEachOf(queueData.queue, (queueItem, queueIdx)=>{
-                const tile = `
-                <div class="card small">
-                  <div class="card-image waves-effect waves-light" id="track_${queueIdx}">
-                    <img src="${queueItem.imageUrl}">
-                    <span class="card-title card-title-custom">${queueItem.artists}</span>
-                  </div>
-                  <div class="card-content card-content-custom">
-                    <p>${queueItem.name}</p>
-                  </div>
-                </div>
-                `;
-                $('#queue-items').append(tile);
-                $(`#track_${queueIdx}`).on('click', event=>{
-                  updateSnackbar(`Playing ${queueItem.name}`);
-                  $.get('/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
-                    document.title = queueItem.name;
-                  });
-                  //- Change the playback button state
-                  updatePlayback();
-                });
-              }, function(err){
-                if(err){
-                  reject(err);
-                } else {
-                  resolve(null);
-                }
-              });
-            });
-            g.then(res=>{
-              //- cb(res);
-            });
-          });
-        };
-
         renderQueue();
+        //- socket.emit('render-queue');
+
         $('#clearqueue').on('click', event=>{
           clearQueue();
         });
         const clearQueue = () => {
-          updateSnackbar(`Clearing queue`);
-          $.get('/spotify/clearqueue', (data, status)=>{
-            renderQueue();
+          socketIO.emit('update-snackbar', {message:`Clearing queue`});
+          $.get('/host/clearqueue', (data, status)=>{
+            //- renderQueue();
+            socketIO.emit('render-queue');
           });
         };
         const shiftQueue = () => {
-          $.get('/spotify/shiftqueue', (queueData, queueStatus) => {
+          $.get('/host/shiftqueue', (queueData, queueStatus) => {
             if (queueData){
               const queueItem = queueData.queue[0];
               if (queueItem){
-                $.get('/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
-                  updateSnackbar(`Now playing ${queueItem.name}`);
+                $.get('/host/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
+                  socketIO.emit('update-snackbar', {message:`Now playing ${queueItem.name}`});
                   document.title = queueItem.name;
                 });
               } else {
-                updateSnackbar(`The queue is empty`);
+                socketIO.emit('update-snackbar', {message:`The queue is empty`});
                 document.title = "AuxMe";
               }
             } else {
               console.log('yo, there was some shiftqueue error');
             }
-            renderQueue();
+            //- renderQueue();
+            socketIO.emit('render-queue');
           });
         };
         const pushQueue = (payload) => {
-          $.get('/spotify/pushqueue', payload, (data, status) => {
-            if (data.question){
+          $.get('/host/pushqueue', payload, (data, status) => {
+            if (data.question){ // tried to update queue but got duplicate track
               if(confirm(data.question)){
                 payload.forcepush = true;
                 pushQueue(payload);
-                renderQueue();
+                //- renderQueue();
+                socketIO.emit('render-queue');
               } else {
                 //- queue not updated
               }
-            } else {
-              updateSnackbar(`Added ${payload.name} to the queue`);
+            } else { // updated queue successfully
+              socketIO.emit('update-snackbar', {message:`Added ${payload.name} to the queue`});
               console.log(data);
               console.log(status);
               //- TODO: Implement socket io event to emit signal to render all sockets' queue
@@ -282,18 +316,17 @@ block content
           this.state = state;
         });
 
-        let deviceId;
         // Ready
         player.addListener('ready', ({ device_id }) => {
           deviceId = device_id;
-          updateSnackbar(`Ready with Device ID ${device_id}`);
+          socketIO.emit('update-snackbar', {message:`Ready with Device ID ${device_id}`});
         });
 
         // Search
         document.getElementById('search')
         .addEventListener('input', event => {
           if(event.target.value){
-            $.get('/spotify/search', { searchKey: event.target.value, limit: 20, offset: 0 }, (searchResults, status)=>{
+            $.get('/host/spotify/search', { searchKey: event.target.value, limit: 20, offset: 0 }, (searchResults, status)=>{
               $('#search_results').empty();
               setTimeout(()=>{
                 searchResults.forEach((result, resultIdx)=>{
@@ -316,14 +349,14 @@ block content
                   $('#search_results').append(card);
 
                   $(`#result_${resultIdx}`).on('dblclick', event=>{
-                    updateSnackbar(`Playing ${name}`);
+                    socketIO.emit('update-snackbar', {message:`Playing ${name}`});
                     const payload = {
                       uri: result.uri,
                       device_id: deviceId,
                       access_token: token
                     };
                     
-                    $.get('/spotify/play', payload, (playData, playStatus) => {
+                    $.get('/host/spotify/play', payload, (playData, playStatus) => {
                       document.title = result.name;
                     });
                   });
@@ -338,7 +371,9 @@ block content
                       imageUrl: result.album.images[1].url
                     };
                     pushQueue(payload);
-                    renderQueue();
+                    //- renderQueue();
+                    socketIO.emit('render-queue');
+
                   });
                 });
               },5);
@@ -360,30 +395,11 @@ block content
         // Not Ready
         player.addListener('not_ready', ({ device_id }) => {
           //- console.log('Device ID has gone offline', device_id);
-          updateSnackbar(`Device ID ${device_id} has gone offline`);
+          socketIO.emit('update-snackbar', {message:`Device ID ${device_id} has gone offline`});
         });
 
         // Connect to the player!
         player.connect();
-
-        const updatePlayback = () => {
-          setTimeout(()=>{
-            $.get('/spotify/playback-state', (data, status) => {
-              console.log("here's the current playback state");
-              console.log(data);
-              if(Object.keys(data.data.body).length && data.data.body.is_playing){
-                console.log('render pause button');
-                $('#play_pause_image').text('pause');
-                // render pause button
-              } else {
-                console.log('render play button');
-                $('#play_pause_image').text('play_arrow');
-                //- render play button
-              }
-            });              
-          }, 500); // WAIT HALF A SECOND TO GET STATE
-          console.log('Play/paused!');
-        }
 
         // Pause
         document.getElementById('play_pause')

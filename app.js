@@ -27,7 +27,8 @@ const db = mongoose.connection;
 // import routes
 const routes = require('./routes/index')(io);
 const users = require('./routes/users')(io);
-const spotify = require('./routes/spotify')(io);
+const host = require('./routes/host')(io);
+const guest = require('./routes/guest')(io);
 
 // io.on('connection', function (socket) {
 //   console.log('a user has connected in app.js');
@@ -89,7 +90,8 @@ app.get('*', function (req, res, next) {
 // configure router for app
 app.use('/', routes);
 app.use('/users', users);
-app.use('/spotify', spotify);
+app.use('/host', host);
+app.use('/guest', guest);
 
 
 

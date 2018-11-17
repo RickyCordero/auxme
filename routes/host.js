@@ -7,7 +7,7 @@ const hash = require('object-hash');
 
 const client_id = '67a661b7dd704e57a5a6f03ff226b04c'; // Your client id
 const client_secret = '5c7a14fe961745d999cb351294eab884'; // Your secret
-const redirect_uri = 'http://localhost:3000/spotify/callback/'; // Your redirect uri
+const redirect_uri = 'http://localhost:3000/host/spotify/callback/'; // Your redirect uri
 
 const stateKey = 'spotify_auth_state';
 
@@ -17,7 +17,6 @@ const spotifyApi = new SpotifyWebApi();
 
 const Player = require('./player');
 
-let loggedIn;
 let global_access_token;
 let global_refresh_token;
 const queue = [];
@@ -48,44 +47,55 @@ function ensureAuxMeAuthenticated(req, res, next) {
 }
 
 // TODO: Determine how to check if a user has signed into their Spotify account
-function ensureSpotifyAuthenticated(req, res, next){
+function ensureSpotifyAuthenticated(req, res, next) {
     console.log(req.cookies);
     // const isLoggedIntoSpotify = req.cookies[stateKey];
     const isLoggedIntoSpotify = false;
-    if(isLoggedIntoSpotify){
+    if (isLoggedIntoSpotify) {
         return next();
     }
-    res.redirect('/spotify/spotify-login');
+    res.redirect('/host/spotify-login');
 }
 
 module.exports = function (io) {
 
     io.on('connection', function (socket) {
         socket.on('user-join', data => {
-            console.log('a user has connected to the spotify page');
+            const id = data.id;
+            console.log(`a user with id ${id} has connected to the spotify page`);
             console.log(data);
-            socket.emit('ack', {yo: 'this is the acknowledgement'});
+            socket.emit('ack', { message: `a user with id ${id} has connected to the spotify page` });
         });
         socket.on('got-token', data => {
             console.log('got the access token');
             console.log(data);
-            socket.emit('ack', {token: data});
+            socket.emit('ack', { token: data });
+        });
+        socket.on('render-queue', data => {
+            console.log('going to render the queue');
+            console.log(data);
+            socket.emit('render-queue');
+        });
+        socket.on('update-snackbar', data => {
+            console.log('going to update the snackbar');
+            console.log(data);
+            socket.emit('update-snackbar', data.message);
         });
     });
-    
+
     /* GET home page. */
     router.get('/', ensureSpotifyAuthenticated, function (req, res, next) {
         // Check if spotify cookie exists
         console.log(res.cookies);
-        res.render('spotify', { title: 'Spotify', access_token: global_access_token, refresh_token: global_refresh_token });
+        res.render('host', { title: 'Spotify', access_token: global_access_token, refresh_token: global_refresh_token });
     });
 
     router.get('/spotify-login', ensureAuxMeAuthenticated, function (req, res, next) {
         // Render the spotify login page
-        res.render('spotify-login', { title: 'Spotify'});
+        res.render('host-login', { title: 'Spotify' });
     });
 
-    router.get('/login', ensureAuxMeAuthenticated, function (req, res, next) {
+    router.get('/spotify/login', ensureAuxMeAuthenticated, function (req, res, next) {
         const state = generateRandomString(16);
 
         // Sets cookie stateKey to state. The value parameter may be a string or object converted to JSON.
@@ -131,7 +141,7 @@ module.exports = function (io) {
             }));
     });
 
-    router.get('/callback', ensureAuxMeAuthenticated, function (req, res, next) {
+    router.get('/spotify/callback', ensureAuxMeAuthenticated, function (req, res, next) {
         // your application requests refresh and access tokens
         // after checking the state parameter
         const code = req.query.code || null;
@@ -144,7 +154,7 @@ module.exports = function (io) {
             //         error: 'state_mismatch'
             //     })
             // );
-            res.redirect('/spotify/login');
+            res.redirect('/host/spotify-login');
         } else {
             res.clearCookie(stateKey);
             const authOptions = {
@@ -192,8 +202,8 @@ module.exports = function (io) {
                     //     }));
                     spotifyApi.setAccessToken(body.access_token);
                     spotifyApi.setRefreshToken(body.refresh_token);
-                    res.render('spotify', { loggedIn: loggedIn, access_token: body.access_token, refresh_token: body.refresh_token });
-                    // req.io.sockets.emit('player-join', access_token);
+                    res.render('host', { access_token: body.access_token, refresh_token: body.refresh_token });
+
                 } else {
                     res.redirect('/#' +
                         queryString.stringify({
@@ -206,7 +216,7 @@ module.exports = function (io) {
 
     });
 
-    router.get('/refresh_token', function (req, res) {
+    router.get('/spotify/refresh_token', function (req, res) {
         // requesting access token by using the refresh token
         const refresh_token = req.query.refresh_token;
         const authOptions = {
@@ -221,9 +231,8 @@ module.exports = function (io) {
 
         request.post(authOptions, function (error, response, body) {
             if (!error && response.statusCode === 200) {
-                const token = body.access_token;
                 res.send({
-                    'access_token': token
+                    'access_token': body.access_token
                 });
             }
         });
@@ -243,7 +252,7 @@ module.exports = function (io) {
         res.send({ all_users: all_users });
     });
 
-    router.get('/update_auth_token', function (req, res) {
+    router.get('/spotify/update_auth_token', function (req, res) {
         console.log('getting new auth token');
         // returns a new auth token using the global refresh token set by the login callback
         const authOptions = {
@@ -266,18 +275,19 @@ module.exports = function (io) {
         });
     });
 
-    router.get('/access_token', function (req, res) {
+    router.get('/spotify/access_token', function (req, res) {
         res.send({
             'access_token': global_access_token
         });
     });
 
-    router.get('/search', ensureAuxMeAuthenticated, function (req, res) {
+    router.get('/spotify/search', ensureAuxMeAuthenticated, function (req, res) {
         const searchKey = req.query.searchKey;
         const limit = req.query.limit;
         const offset = req.query.offset;
         if (searchKey) {
-            spotifyApi.searchTracks(searchKey, { limit: limit, offset: offset })
+            spotifyApi
+                .searchTracks(searchKey, { limit: limit, offset: offset })
                 .then(data => {
                     const d = data.body.tracks.items;
                     res.send(d);
@@ -287,7 +297,8 @@ module.exports = function (io) {
     });
 
 
-    router.get('/play', ensureAuxMeAuthenticated, function (req, res) {
+    router.get('/spotify/play', ensureAuxMeAuthenticated, function (req, res) {
+        // TODO: Use the spotify web api node library to play
         const options = {
             body: JSON.stringify({ uris: [req.query.uri] }),
             headers: {
@@ -330,7 +341,7 @@ module.exports = function (io) {
         res.send({ queue: queue });
     });
 
-    router.get('/myplaylists', ensureAuxMeAuthenticated, function (req, res) {
+    router.get('/spotify/myplaylists', ensureAuxMeAuthenticated, function (req, res) {
         spotifyApi
             .getUserPlaylists({ limit: 50, offset: 0 })
             .then(data => {
@@ -343,7 +354,7 @@ module.exports = function (io) {
             });
     });
 
-    router.get('/playlist-tracks', ensureAuxMeAuthenticated, function (req, res) {
+    router.get('/spotify/playlist-tracks', ensureAuxMeAuthenticated, function (req, res) {
         const playlistId = req.query.playlist_id;
         console.log(playlistId);
         spotifyApi
@@ -358,7 +369,7 @@ module.exports = function (io) {
             });
     });
 
-    router.get('/playback-state', ensureAuxMeAuthenticated, function (req, res) {
+    router.get('/spotify/playback-state', ensureAuxMeAuthenticated, function (req, res) {
         spotifyApi
             .getMyCurrentPlaybackState()
             .then(data => {

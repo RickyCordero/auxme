@@ -2,6 +2,12 @@ extends layout
 
 block content
     h1 Join a party
-    input(type="text" placeholder="Enter your display name")
-    input(type="text" placeholder="Enter pin code")
+    input(type="text" id="display-name" placeholder="Enter your display name")
+    input(type="text" id="pin" placeholder="Enter pin code")
     button(class="waves-effect btn-flat" id="joinButton") Join
+    script.
+        $('#joinButton').on('click', event => {
+            const displayName = $('#display-name').val();
+            const pin = $('#pin').val();
+            window.location.replace(`/guest/displayName/${displayName}/pin/${pin}`);
+        });

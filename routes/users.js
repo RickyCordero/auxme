@@ -10,7 +10,7 @@ const User = require('../models/user');
 module.exports = function (io) {
   /* GET users listing. */
   router.get('/', function (req, res, next) {
-    res.send('respond with a resource');
+    res.send("This route doesn't do anything yet");
   });
 
   router.get('/register', function (req, res, next) {

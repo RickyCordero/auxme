@@ -8,21 +8,26 @@ block content
    div.alert.alert-danger #{error.msg}
  form(method='post', action='/users/register',enctype='multipart/form-data')
   .form-group
-   label Name
-   input.form-control(name='name', type='text', placeholder='Enter Name')
+    .input-field
+      label(for='name') Name
+      input.form-control(id='name' name='name', type='text')
   .form-group
-   label Email
-   input.form-control(name='email', type='email', placeholder='Enter Email')
+    .input-field
+      label(for='email') Email
+      input.form-control(id='email' name='email', type='email')
   .form-group
-   label Username
-   input.form-control(name='username', type='text', placeholder='Enter Username')
+    .input-field
+      label(for='username') Username
+      input.form-control(id='email' name='username', type='text')
   .form-group
-   label Password
-   input.form-control(name='password', type='password', placeholder='Enter Password')
+    .input-field
+      label(for='password') Password
+      input.form-control(id='password' name='password', type='password')
   .form-group
-   label Confirm Password
-   input.form-control(name='password2', type='password', placeholder='Confirm Password')
-  .form-group
+    .input-field
+      label(for='password2') Confirm Password
+      input.form-control(id='password2' name='password2', type='password')
+  //- .form-group
   //-  label Profile Image
   //-  input.form-control(name='profileimage', type='file')
   input(class="waves-effect btn-flat" type='submit', name='submit',value='Register')
