@@ -2,20 +2,24 @@ doctype html
 html(lang='en')
   head
     title AuxMe
+    script(src='https://code.jquery.com/jquery-3.3.1.min.js')
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js")
+    //- Bootstrap
+    script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js")
+    //- Async
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/async/2.6.1/async.js")
 
-    //- Google fonts
-    link(href='https://fonts.googleapis.com/css?family=Comfortaa' rel='stylesheet')
-
+    //- Google font
+    link(href='https://fonts.googleapis.com/css?family=Comfortaa', rel='stylesheet')
     //- Materlalize css
     link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css")
     //- Materialize JS
     script(src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js")
+    //- Material icons
+    link(href='https://fonts.googleapis.com/icon?family=Material+Icons', rel='stylesheet')
 
-    script(src='https://code.jquery.com/jquery-3.3.1.min.js')
-    script(src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js")
-    script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js")
-    script(src="https://cdnjs.cloudflare.com/ajax/libs/async/2.6.1/async.js")
     style.
+      /* Scrollbar */
       ::-webkit-scrollbar {
         width: 5px;
         height: 5px;
@@ -49,6 +53,7 @@ html(lang='en')
       ::-webkit-scrollbar-corner {
         background: transparent;
       }
+      /* Host view */
       #players-list{
         
       }
@@ -80,11 +85,12 @@ html(lang='en')
         font-size: 20px !important;
         width: 200px;
       }
-      #playback-buttons{
+      #playback-info {
         text-align: center;
       }
-      i.icon-black{
-        color: black;
+      #playback-buttons{
+        text-align: center;
+        padding-bottom: 20px;
       }
       #playlist-container{
         display: none; /* initially hidden then toggled */
@@ -102,32 +108,26 @@ html(lang='en')
         font-size: 30px;
         cursor: pointer;
       }
-      #scrollLeft{
-        vertical-align: middle;
-      }
-      #scrollRight{
-        vertical-align: middle;
-      }
       /* The snackbar - position it at the bottom and in the middle of the screen */
       #snackbar {
-          visibility: hidden; /* Hidden by default. Visible on click */
-          min-width: 250px; /* Set a default minimum width */
-          margin-left: -125px; /* Divide value of min-width by 2 */
-          background-color: #333; /* Black background color */
-          color: #fff; /* White text color */
-          text-align: center; /* Centered text */
-          border-radius: 2px; /* Rounded borders */
-          padding: 16px; /* Padding */
-          position: fixed; /* Sit on top of the screen */
-          z-index: 1; /* Add a z-index if needed */
-          left: 50%; /* Center the snackbar */
-          bottom: 30px; /* 30px from the bottom */
+        visibility: hidden; /* Hidden by default. Visible on click */
+        min-width: 250px; /* Set a default minimum width */
+        margin-left: -125px; /* Divide value of min-width by 2 */
+        background-color: #333; /* Black background color */
+        color: #fff; /* White text color */
+        text-align: center; /* Centered text */
+        border-radius: 2px; /* Rounded borders */
+        padding: 16px; /* Padding */
+        position: fixed; /* Sit on top of the screen */
+        z-index: 2; /* Add a z-index if needed */
+        left: 50%; /* Center the snackbar */
+        bottom: 30px; /* 30px from the bottom */
       }
 
       /* Show the snackbar when clicking on a button (class added with JavaScript) */
       #snackbar.show {
-          visibility: visible; /* Show the snackbar */
-          /* Add animation: Take 0.5 seconds to fade in and out the snackbar. 
+        visibility: visible; /* Show the snackbar */
+        /* Add animation: Take 0.5 seconds to fade in and out the snackbar. 
         However, delay the fade out process for 2.5 seconds */
         -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
         animation: fadein 0.5s, fadeout 0.5s 2.5s;
@@ -155,16 +155,16 @@ html(lang='en')
       }
       /* ---- reset ---- */
       body {
-        background-color: grey;
-        margin: 0;
         /*
-        background: linear-gradient(-45deg, rgba(0,0,0,0.5), rgba(255,255,255, 0.5), rgba(0,0,0,1), rgba(10,10,10, 0.5));
-        background-size: 400% 400%;
-        animation: Gradient 60s ease infinite; */
+        background: linear-gradient(-45deg, rgba(238,64,115,1), rgba(74,144,226, 1));
+        */
+        background-color: #f6f6f6;
         font-family: 'Comfortaa', sans-serif;
-      }
-      canvas {
-        display: block;
+        /*
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column; 
+        */
       }
 
       /* ---- particles.js container ---- */
@@ -179,50 +179,144 @@ html(lang='en')
         background-size: 100%;
         background-position: 0% 0%;
       }
-      nav{
-        background-color: grey;
-        background: linear-gradient(-45deg, rgba(0,0,0,0.5), rgba(255,255,255, 0.5), rgba(0,0,0,1), rgba(10,10,10, 0.5));
-        background-size: 400% 400%;
-        animation: Gradient 60s ease infinite;
+      /* -------------------------------------------------------- */
+      /*
+      main {
+        flex: 1 0 auto;
       }
-      #auxme-logo{
-        font-family: 'Comfortaa', sans-serif;
+      */
+      #sidenav-left {
+        background-color: #4a4a4a;
+      }
+      #auxme-logo {
+        font-size: 30px;
+        text-align: center;
+        color: white;
+        padding: 10px;
+      }
+      #main-content {
+        background-color: #dbdbdb;
+      }
+      nav {
+        background-color: white;
+      }
+      header, main {
+        padding-left: 300px;
+      }
+      @media only screen and (max-width : 992px) {
+        header, main {
+          padding-left: 0;
+        }
+      }
+      i.menu{
+        color: grey;
+      }
+      i.playback{
+        color: white;
+      }
+      .page-footer{
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        background-color: #4a4a4a;
+        z-index: 1;
       }
   body
-    nav.nav-wrapper
-      a(href="/" id="auxme-logo" class="brand-logo" style="padding-left:10px") AuxMe
-      //- a(href="/" class="waves-effect waves-teal btn-flat") AuxMe
-      ul(id="nav-mobile" class="right hide-on-med-and-down")
+    header
+      nav.search
+        .nav-wrapper
+          a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
+            i.material-icons.menu menu
+          form
+            .input-field
+              input(id='search', placeholder='Search', type='search', required='')
+              label.label-icon(for='search')
+                i.material-icons.menu search
+              i.material-icons.closed close
+    main
+      ul(id="sidenav-left" class="sidenav sidenav-fixed")
+        a(href="/")
+          #auxme-logo AuxMe
+        //- .divider
         if user
           li(class=(title == 'Members' ? 'active' : ''))
-            a(href='/members') Members
+            a(href='/members', class="waves-effect white-text") Members
           li(class=(title == 'Spotify' ? 'active' : ''))
-            a(href='/host') Host
+            a(href='/host', class="waves-effect white-text") Host
           li(class=(title == 'Logout' ? 'active' : ''))
-            a(href='/users/logout') Logout
+            a(href='/users/logout', class="waves-effect white-text") Logout
+          li(class=(title == 'Generate party code' ? 'active' : ''))
+            a(id="generate-party-code" href='#', class="waves-effect white-text") Generate party code
+          li(id="party-code")
+          
         if !user
           li(class=(title == 'Join' ? 'active' : ''))
-            a(href='/join') Join Party
+            a(href='/join', class="waves-effect white-text") Join Party
           li(class=(title == 'Register' ? 'active' : ''))
-            a(href='/users/register') Register
+            a(href='/users/register', class="waves-effect white-text") Register
           li(class=(title == 'Login' ? 'active' : ''))
-            a(href='/users/login') Login
-    #particles
-    //- particles.js lib - https://github.com/VincentGarreau/particles.js
-    script(src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js")
-    script.
-      // Don't load particles on mobile
-      if (screen && screen.width > 480) {
-        //- const particlesCDN =  document.createElement('script');
-        const particlesScript =  document.createElement('script');
-        //- particlesCDN.src = 'http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js';
-        particlesScript.src = '/javascripts/particles.js';
-        //- document.head.appendChild(particlesCDN);
-        document.head.appendChild(particlesScript);
-        //- document.write('<script type="text/javascript" src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
-      }
-    //- particles javascript file
-    //- script(src="/javascripts/particles.js" type="text/javascript")
-    .container
-      != messages()
-      block content
+            a(href='/users/login', class="waves-effect white-text") Login
+      .container
+        != messages()
+        block content
+      //- #particles
+      //- script(src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js")
+      //- script.
+      //-   // Don't load particles on mobile
+      //-   if (screen && screen.width > 480) {
+      //-     //- const particlesCDN =  document.createElement('script');
+      //-     const particlesScript =  document.createElement('script');
+      //-     //- particlesCDN.src = 'http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js';
+      //-     particlesScript.src = '/javascripts/particles.js';
+      //-     //- document.head.appendChild(particlesCDN);
+      //-     document.head.appendChild(particlesScript);
+      //-     //- document.write('<script type="text/javascript" src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
+      //-   }
+    footer
+      .page-footer
+        #playback-info
+        #playback-buttons
+          button(class="waves-effect btn-flat" id="previous")
+            i(class="material-icons playback") fast_rewind
+          button(class="waves-effect btn-flat" id="play_pause")
+            i(class="material-icons playback" id="play_pause_image") play_arrow 
+          button(class="waves-effect btn-flat" id="next")
+            i(class="material-icons playback") fast_forward
+
+    //- nav.nav-wrapper
+    //-   a(href="/" id="auxme-logo" class="brand-logo" style="padding-left:10px") AuxMe
+    //-   //- a(href="/" class="waves-effect waves-teal btn-flat") AuxMe
+    //-   ul(id="nav-mobile" class="right hide-on-med-and-down")
+    //-     if user
+    //-       li(class=(title == 'Members' ? 'active' : ''))
+    //-         a(href='/members') Members
+    //-       li(class=(title == 'Spotify' ? 'active' : ''))
+    //-         a(href='/host') Host
+    //-       li(class=(title == 'Logout' ? 'active' : ''))
+    //-         a(href='/users/logout') Logout
+    //-     if !user
+    //-       li(class=(title == 'Join' ? 'active' : ''))
+    //-         a(href='/join') Join Party
+    //-       li(class=(title == 'Register' ? 'active' : ''))
+    //-         a(href='/users/register') Register
+    //-       li(class=(title == 'Login' ? 'active' : ''))
+    //-         a(href='/users/login') Login
+    //- #particles
+    //- //- particles.js lib - https://github.com/VincentGarreau/particles.js
+    //- script(src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js")
+    //- script.
+    //-   // Don't load particles on mobile
+    //-   if (screen && screen.width > 480) {
+    //-     //- const particlesCDN =  document.createElement('script');
+    //-     const particlesScript =  document.createElement('script');
+    //-     //- particlesCDN.src = 'http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js';
+    //-     particlesScript.src = '/javascripts/particles.js';
+    //-     //- document.head.appendChild(particlesCDN);
+    //-     document.head.appendChild(particlesScript);
+    //-     //- document.write('<script type="text/javascript" src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
+    //-   }
+    //- //- particles javascript file
+    //- //- script(src="/javascripts/particles.js" type="text/javascript")
+    //- .container
+    //-   != messages()
+    //-   block content

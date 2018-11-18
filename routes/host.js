@@ -23,6 +23,7 @@ const queue = [];
 let tokens = [];
 let all_users = [];
 const players = [];
+let partyCode;
 
 /**
  * Generates a random string containing numbers and letters
@@ -59,12 +60,25 @@ function ensureSpotifyAuthenticated(req, res, next) {
 
 module.exports = function (io) {
 
+    console.log('io from host.js');
+    console.log(io);
+
     io.on('connection', function (socket) {
-        socket.on('user-join', data => {
-            const id = data.id;
-            console.log(`a user with id ${id} has connected to the spotify page`);
+        socket.on('host-join', data => {
+            const partyCode = data.partyCode;
+            console.log(`a host has connected`);
             console.log(data);
-            socket.emit('ack', { message: `a user with id ${id} has connected to the spotify page` });
+            console.log(partyCode);
+            socket.join(partyCode);
+            socket.emit('ack', { message: `a host has joined a room with party code ${partyCode}` });
+        });
+        socket.on('guest-join', data => {
+            const room = data.room;
+            console.log(data);
+            console.log(room);
+            console.log(`going to join the room: ${room}`);
+            socket.join(room);
+            socket.emit('guest-join', `${data.displayName} has joined the room`);
         });
         socket.on('got-token', data => {
             console.log('got the access token');
@@ -81,6 +95,12 @@ module.exports = function (io) {
             console.log(data);
             socket.emit('update-snackbar', data.message);
         });
+        socket.on('update-now-playing', data => {
+            console.log('going to update the now playing info');
+            console.log(data);
+            socket.emit('update-now-playing', data);
+        });
+
     });
 
     /* GET home page. */
@@ -389,6 +409,11 @@ module.exports = function (io) {
 
     router.get('/profile', ensureAuxMeAuthenticated, function (req, res) {
         res.send(req.session);
+    });
+
+    router.get('/generate-party-code', ensureAuxMeAuthenticated, function (req, res) {
+        partyCode = 1234;
+        res.send({ partyCode: partyCode });
     });
 
     return router;

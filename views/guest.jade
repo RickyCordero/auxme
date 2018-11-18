@@ -10,20 +10,7 @@ block content
   #players-list
   #queue-container
     #queue-items
-  #playback-buttons
-    button(class="waves-effect btn-flat" id="previous")
-      i(class="material-icons icon-black") fast_rewind
-    button(class="waves-effect btn-flat" id="play_pause")
-      i(class="material-icons icon-black" id="play_pause_image") play_arrow 
-    button(class="waves-effect btn-flat" id="next")
-      i(class="material-icons icon-black") fast_forward
-    //- button(class="btn btn-default" id="previous") Previous
-    //- button(class="btn btn-default" id="play_pause") Play/Pause
-    //- button(class="btn btn-default" id="next") Next
 
-  div.input-group.input-group-lg
-    div.input-group-prepend
-    input(type="text" id="search" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-lg" placeholder="Search for a track")
   button(class="waves-effect btn-flat" id="show-players") Show players
   button(class="waves-effect btn-flat" id="trigger") Trigger
   button(class="waves-effect btn-flat" id="obtain-new-token") Refresh token
@@ -31,7 +18,6 @@ block content
     #playlist-items
   #search_results.collection
   #snackbar
-  link(href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet")
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js")
   script.
     let spotifyToken;
@@ -149,10 +135,13 @@ block content
     };
 
     socketIO.on('connect', socket => {
-      console.log('a user has connected Ricky');
+      console.log('a guest has connected to a guest page');
       const displayName = '#{displayName}';
       const pin = '#{pin}';
-      socketIO.emit('user-join', {displayName: displayName, pin: pin});
+      const payload = {displayName: displayName, room: pin};
+      console.log('emitting guest-join with data:');
+      console.log(payload);
+      socketIO.emit('guest-join', payload);
     });
     
     socketIO.on('ack', data => {

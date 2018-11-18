@@ -47,12 +47,15 @@ function ensureSpotifyAuthenticated(req, res, next) {
 
 module.exports = function (io) {
 
+    console.log('io from guest.js');
+    console.log(io);
 
     io.on('connection', function (socket) {
-        console.log('a user has connected to the guest page');
+        console.log('a guest has connected to the guest page');
 
-        socket.on('user-join', data => {
-
+        socket.on('guest-join', data => {
+            console.log('got the guest-join');
+            console.log(data);
         });
     });
 

@@ -4,20 +4,7 @@ block content
   #players-list
   #queue-container
     #queue-items
-  #playback-buttons
-    button(class="waves-effect btn-flat" id="previous")
-      i(class="material-icons icon-black") fast_rewind
-    button(class="waves-effect btn-flat" id="play_pause")
-      i(class="material-icons icon-black" id="play_pause_image") play_arrow 
-    button(class="waves-effect btn-flat" id="next")
-      i(class="material-icons icon-black") fast_forward
-    //- button(class="btn btn-default" id="previous") Previous
-    //- button(class="btn btn-default" id="play_pause") Play/Pause
-    //- button(class="btn btn-default" id="next") Next
 
-  div.input-group.input-group-lg
-    div.input-group-prepend
-    input(type="text" id="search" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-lg" placeholder="Search for a track")
   button(class="waves-effect btn-flat" id="show-players") Show players
   button(class="waves-effect btn-flat" id="show-playlists") Show playlists
   button(class="waves-effect btn-flat" id="clearqueue") Clear queue
@@ -27,11 +14,9 @@ block content
     #playlist-items
   #search_results.collection
   #snackbar
-  link(href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet")
   script(src="https://sdk.scdn.co/spotify-player.js")
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js")
   script.
-
     let deviceId;
     let token;
     // Tell Socket.io client to connect to the '/spotify' namespace
@@ -64,7 +49,6 @@ block content
     };
 
     const renderQueue = () => {
-      //- console.log('rendering queue');
       $('#queue-items').empty();
       $.get('/host/getqueue', (queueData, queueStatus)=>{
         let g = new Promise((resolve, reject)=>{
@@ -82,14 +66,8 @@ block content
             `;
             $('#queue-items').append(tile);
             $(`#track_${queueIdx}`).on('click', event=>{
-              //- console.log('this is the value of token:'+token);
-              //- console.log('this is the value of deviceId:'+deviceId);
               socketIO.emit('update-snackbar', {message:`Playing ${queueItem.name}`});
-              $.get('/host/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
-                document.title = queueItem.name;
-              });
-              //- Change the playback button state
-              updatePlayback();
+              socketIO.emit('update-now-playing', {artists:queueItem.artists, name:queueItem.name, uri: queueItem.uri});
             });
           }, function(err){
             if(err){
@@ -104,10 +82,24 @@ block content
         });
       });
     };
-
+    const generatePartyCode = () => {
+      $.get('/host/generate-party-code', (data, status)=>{
+        const partyCode = data.partyCode;
+        console.log(partyCode);
+        updateSnackbar('Generated party code: '+partyCode);
+        const partyHtml = `
+        <a id="party-code" href='#' class="waves-effect white-text">
+          Party code: ${partyCode}
+        </a>
+        `;
+        $('#party-code').empty();
+        $('#party-code').append(partyHtml);
+        socketIO.emit('host-join', {partyCode:partyCode});
+      });
+    };
     socketIO.on('connect', socket => {
       console.log('a user has connected Ricky')
-      //- socketIO.emit('user-join', {my: "data"});
+      generatePartyCode();
     });
 
     $('#trigger').on('click', event => {
@@ -130,6 +122,32 @@ block content
       console.log(message);
       updateSnackbar(message);
     });
+
+    socketIO.on('update-now-playing', data => {
+      console.log('going to update the now playing info using socket.io');
+      console.log(data);
+      const playbackHtml = `
+      <h5 id="now-playing-song" class="white-text">
+        ${data.name}
+      </h5>
+      <p id="now-playing-artist" class="white-text">
+        ${data.artists}
+      </p>
+      `;
+      $('#playback-info').empty();
+      $('#playback-info').append(playbackHtml);
+      //- $('#now-playing-song').text(data.name);
+      //- $('#now-playing-artist').text(data.artists);
+
+      $.get('/host/spotify/play', {uri: data.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
+        console.log(playData);
+        console.log(playStatus);
+      });
+      document.title = data.name;
+      //- Change the playback button state
+      updatePlayback();
+    });
+
 
     window.onSpotifyWebPlaybackSDKReady = () => {
       // authenticate the client Spotify web api
@@ -173,7 +191,9 @@ block content
           console.error(message);
           console.log('trying to start at beginning of queue');
           $.get('/host/getqueue', (queueData, status)=>{
-            socketIO.emit('update-snackbar', {message:`Playing ${queueData.queue[0].name}`});
+            const track = queueData.queue[0];
+            socketIO.emit('update-snackbar', {message:`Playing ${track.name}`});
+            socketIO.emit('update-now-playing', {artists: track.artists, name: track.name, uri: track.uri});
             const payload = {
               uri: queueData.queue[0].uri,
               device_id: deviceId,
@@ -181,7 +201,7 @@ block content
             };
             
             $.get('/host/spotify/play', payload, (playData, playStatus) => {
-              document.title = queueData.queue[0].name;
+              document.title = track.name;
             });
             
           });
@@ -275,16 +295,17 @@ block content
               if (queueItem){
                 $.get('/host/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
                   socketIO.emit('update-snackbar', {message:`Now playing ${queueItem.name}`});
+                  socketIO.emit('update-now-playing', {artists: queueItem.artists, name:queueItem.name, uri:queueItem.uri});
                   document.title = queueItem.name;
                 });
               } else {
                 socketIO.emit('update-snackbar', {message:`The queue is empty`});
+                socketIO.emit('update-now-playing', {artists: '', name:'', uri:''});
                 document.title = "AuxMe";
               }
             } else {
               console.log('yo, there was some shiftqueue error');
             }
-            //- renderQueue();
             socketIO.emit('render-queue');
           });
         };
@@ -294,7 +315,6 @@ block content
               if(confirm(data.question)){
                 payload.forcepush = true;
                 pushQueue(payload);
-                //- renderQueue();
                 socketIO.emit('render-queue');
               } else {
                 //- queue not updated
@@ -307,6 +327,12 @@ block content
             }
           });
         };
+
+        $('#generate-party-code').on('click', event => {
+          console.log('clicked');
+          generatePartyCode();
+        });
+
         player.addListener('player_state_changed', state => {
           console.log(state);
           if(this.state && !this.state.paused && state.paused && state.position === 0) {
@@ -335,6 +361,7 @@ block content
                   const minutes = Math.floor(result.duration_ms / 60000);
                   let seconds = Math.round((result.duration_ms / 1000) - 60*minutes);
                   const imageUrl = result.album.images[2].url;// 64 x 64
+                  const uri = result.uri;
                   const card = `
                   <li class="collection-item avatar" id="result_${resultIdx}">
                     <img src="${imageUrl}" class="circle">
@@ -350,8 +377,9 @@ block content
 
                   $(`#result_${resultIdx}`).on('dblclick', event=>{
                     socketIO.emit('update-snackbar', {message:`Playing ${name}`});
+                    socketIO.emit('update-now-playing', {artists:artists, name:name, uri: uri});
                     const payload = {
-                      uri: result.uri,
+                      uri: uri,
                       device_id: deviceId,
                       access_token: token
                     };
