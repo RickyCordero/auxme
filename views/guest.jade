@@ -10,13 +10,11 @@ block content
   #players-list
   #queue-container
     #queue-items
-
   button(class="waves-effect btn-flat" id="show-players") Show players
   button(class="waves-effect btn-flat" id="trigger") Trigger
   button(class="waves-effect btn-flat" id="obtain-new-token") Refresh token
   #playlist-container
     #playlist-items
-  #search_results.collection
   #snackbar
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js")
   script.
@@ -68,9 +66,9 @@ block content
 
     const clearQueue = () => {
       updateSnackbar(`Clearing queue`);
-      $.get('/guest/spotify/clearqueue', (data, status)=>{
-        //- renderQueue();
-        socketIO.emit('render-queue');
+      $.get('/guest/clearqueue', (data, status)=>{
+        //- socketIO.emit('render-queue');
+        renderQueue();
       });
     };
 
@@ -129,36 +127,100 @@ block content
             $('#play_pause_image').text('play_arrow');
             //- render play button
           }
-        });              
+        });
       }, 500); // WAIT HALF A SECOND TO GET STATE
       console.log('Play/paused!');
     };
 
+    //- On guest join via client
     socketIO.on('connect', socket => {
-      console.log('a guest has connected to a guest page');
       const displayName = '#{displayName}';
       const pin = '#{pin}';
       const payload = {displayName: displayName, room: pin};
-      console.log('emitting guest-join with data:');
-      console.log(payload);
+      updateSnackbar(`joining room ${pin} with name ${displayName}`);
       socketIO.emit('guest-join', payload);
     });
-    
-    socketIO.on('ack', data => {
-      console.log('got the acknowledgement');
-      console.log(data);
+
+    //- Listen for host-join signal from server
+    socketIO.on('host-join', data => {
+      console.log(data.message);
+      updateSnackbar(data.message);
     });
 
+    //- Listen for guest-join signal from server (only other guests)
+    socketIO.on('guest-join', data => {
+      console.log(data);
+      updateSnackbar(data.message);
+    });
+
+    //- Listen for guest-join signal from server
+    socketIO.on('host-spotify-access-token', data => {
+      console.log(data);
+      //- updateSnackbar(`host spotify access token: ${data.token}`);
+    });
+
+    //- Listen for render-queue signal from server
     socketIO.on('render-queue', data => {
       console.log('going to render the queue using socket.io');
       console.log(data);
       renderQueue();
     });
 
+    const removeTrackFromQueue = (track) => {
+      $.get('/guest/removetrack', {track:track}, (data, status)=>{
+        console.log(data);
+        console.log(status);
+      });
+    };
+
+    //- Listen for render-queue signal from server
+    socketIO.on('remove-track-from-queue', data => {
+      console.log('going to remove a track from the queue using socket.io');
+      console.log(data);
+      //- a guest shares the same reference to the queue, thus only needs to render the queue
+      removeTrackFromQueue(data.track);
+      renderQueue();
+    });
+
+    //- Listen for clear-queue signal from server
+    socketIO.on('clear-queue', data => {
+      console.log('going to clear queue using socket.io');
+      console.log(data);
+      clearQueue();
+    });
+
+    //- Listen for update-snackbar signal from server
+    socketIO.on('update-snackbar', message => {
+      console.log('going to update the snackbar using socket.io');
+      console.log(message);
+      updateSnackbar(message);
+    });
+
+    //- Listen for update-now-playing signal from server
+    socketIO.on('update-now-playing', data => {
+      console.log('going to update the now playing info using socket.io');
+      console.log(data);
+      const playbackHtml = `
+      <h5 id="now-playing-song" class="white-text">
+        ${data.name}
+      </h5>
+      <p id="now-playing-artist" class="white-text">
+        ${data.artists}
+      </p>
+      `;
+      $('#playback-info').empty();
+      $('#playback-info').append(playbackHtml);
+
+      document.title = data.name;
+      //- Change the playback button state
+      updatePlayback();
+    });
+
     $('#trigger').on('click', event => {
       //- socketIO.emit('user-join', {my: "data"});
     });
 
+    renderQueue();
     // authenticate the client Spotify web api
     // get token via back end using authorization code flow
     //- $('#spotify-login').on('click', event => {
@@ -254,17 +316,12 @@ block content
       $("#playlist-container").slideToggle(speed);
     });
 
-    $('#clearqueue').on('click', event=>{
-      clearQueue();
-    });
-
     // Search
     $('#search').on('input', event => {
       if(event.target.value){
-        console.log(event.target.value);
+        $("#host-content").hide('slow');
+        $('#search-content').show('slow');
         $.get('/guest/search', { searchKey: event.target.value, limit: 20, offset: 0 }, (searchResults, status) => {
-          console.log(status);
-          console.log(searchResults);
           $('#search_results').empty();
           setTimeout(()=>{
             searchResults.forEach((result, resultIdx)=>{
@@ -303,5 +360,7 @@ block content
         });
       } else {
         $('#search_results').empty();
+        $("#host-content").show('slow');
+        $('#search-content').hide('slow');
       }
     });

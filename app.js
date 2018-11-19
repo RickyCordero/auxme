@@ -30,9 +30,62 @@ const users = require('./routes/users')(io);
 const host = require('./routes/host')(io);
 const guest = require('./routes/guest')(io);
 
+let room;
+
 // io.on('connection', function (socket) {
 //   console.log('a user has connected in app.js');
 // });
+
+io.on('connection', function (socket) {
+  console.log('a connection has been made');
+  socket.on('host-join', data => {
+    room = data.partyCode;
+    console.log(`a host has connected from the server side`);
+    console.log(data);
+    socket.join(room);
+    io.emit('host-join', { message: `a host has joined a room with party code ${room}` });
+  });
+  socket.on('guest-join', data => {
+    console.log(data);
+    const message = `guest "${data.displayName}" has joined the room: ${data.room}`;
+    console.log(message);
+    socket.join(data.room);
+    // tell all guests that you've arrived
+    socket.broadcast.emit('guest-join', { message: message });
+  });
+  socket.on('host-spotify-access-token', data => {
+    console.log("got the host's spotify access token");
+    console.log(data);
+    // sending access token to all clients except host
+    socket.broadcast.emit('host-spotify-access-token', { token: data.token });
+  });
+  socket.on('render-queue', data => {
+    console.log('going to render the queue');
+    // console.log(data);
+    io.emit('render-queue');
+  });
+  socket.on('clear-queue', data => {
+    console.log('going to clear the queue');
+    // console.log(data);
+    io.emit('clear-queue');
+  });
+  socket.on('remove-track-from-queue', data => {
+    console.log('going to remove a track from the queue');
+    console.log(data);
+    io.emit('remove-track-from-queue', {track: data.track});
+  });  
+  socket.on('update-snackbar', data => {
+    console.log('going to update the snackbar');
+    console.log(data);
+    io.emit('update-snackbar', data.message);
+  });
+  socket.on('update-now-playing', data => {
+    console.log('going to update the now playing info');
+    console.log(data);
+    io.emit('update-now-playing', data);
+  });
+
+});
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

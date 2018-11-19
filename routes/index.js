@@ -19,9 +19,9 @@ module.exports = function (io) {
         res.render('index');
     });
 
-    router.get('/members', ensureAuxMeAuthenticated, function (req, res) {
-        res.render('members', { title: 'Members' });
-    });
+    // router.get('/members', ensureAuxMeAuthenticated, function (req, res) {
+    //     res.render('members', { title: 'Members' });
+    // });
 
     router.get('/join', function (req, res) {
         res.render('join');

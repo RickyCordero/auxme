@@ -85,6 +85,9 @@ html(lang='en')
         font-size: 20px !important;
         width: 200px;
       }
+      .input-field, button {
+        font-family: "Uni Sans";
+      }
       #playback-info {
         text-align: center;
       }
@@ -155,11 +158,11 @@ html(lang='en')
       }
       /* ---- reset ---- */
       body {
-        /*
-        background: linear-gradient(-45deg, rgba(238,64,115,1), rgba(74,144,226, 1));
-        */
+
         background-color: #f6f6f6;
-        font-family: 'Comfortaa', sans-serif;
+        /*font-family: 'Comfortaa', sans-serif;*/
+        font-family: "Uni Sans";
+        color: #4a4a4a;
         /*
         display: flex;
         min-height: 100vh;
@@ -195,7 +198,7 @@ html(lang='en')
         padding: 10px;
       }
       #main-content {
-        background-color: #dbdbdb;
+        
       }
       nav {
         background-color: white;
@@ -221,44 +224,71 @@ html(lang='en')
         background-color: #4a4a4a;
         z-index: 1;
       }
+      .sidenav li>a {
+        font-weight: normal;
+      }
+      input {
+        font-family: "Uni Sans Light";
+      }
+      .btn {
+        background-color: #5f99dd;
+      }
+      .btn:hover{
+        background-color: #6ea3e1;
+      }
+      .remove{
+        font-size: 12px;
+        cursor: pointer;
+      }
+      #host-content{
+
+      }
   body
     header
       nav.search
         .nav-wrapper
-          a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
-            i.material-icons.menu menu
-          form
-            .input-field
-              input(id='search', placeholder='Search', type='search', required='')
-              label.label-icon(for='search')
-                i.material-icons.menu search
-              i.material-icons.closed close
+            a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
+              i.material-icons.menu menu
+            form
+              .input-field
+                input(id='search', placeholder='Search', type='search', required='')
+                label.label-icon(for='search')
+                  i.material-icons.menu search
+                i.material-icons.closed close
     main
       ul(id="sidenav-left" class="sidenav sidenav-fixed")
         a(href="/")
-          #auxme-logo AuxMe
+          #auxme-logo auxme
         //- .divider
         if user
-          li(class=(title == 'Members' ? 'active' : ''))
-            a(href='/members', class="waves-effect white-text") Members
           li(class=(title == 'Spotify' ? 'active' : ''))
-            a(href='/host', class="waves-effect white-text") Host
-          li(class=(title == 'Logout' ? 'active' : ''))
-            a(href='/users/logout', class="waves-effect white-text") Logout
+            a(id="host-link" href='#', class="waves-effect white-text") Host
+          li(class=(title == 'Party' ? 'active' : ''))
+            a(id="party-link" href='#', class="waves-effect white-text") Party
           li(class=(title == 'Generate party code' ? 'active' : ''))
             a(id="generate-party-code" href='#', class="waves-effect white-text") Generate party code
           li(id="party-code")
+          li(class=(title == 'Logout' ? 'active' : ''))
+            a(id="logout-link" href='/users/logout', class="waves-effect white-text") Logout
           
         if !user
-          li(class=(title == 'Join' ? 'active' : ''))
-            a(href='/join', class="waves-effect white-text") Join Party
-          li(class=(title == 'Register' ? 'active' : ''))
-            a(href='/users/register', class="waves-effect white-text") Register
           li(class=(title == 'Login' ? 'active' : ''))
-            a(href='/users/login', class="waves-effect white-text") Login
-      .container
-        != messages()
-        block content
+            a(id="login-link" href='/users/login', class="waves-effect white-text") Login
+          li(class=(title == 'Register' ? 'active' : ''))
+            a(id="register-link" href='/users/register', class="waves-effect white-text") Register
+          li(class=(title == 'Join' ? 'active' : ''))
+            a(id="join-link" href='/join', class="waves-effect white-text") Join Party
+      #host-view
+        .container
+          #search-content(style="display: none;")
+            #search_results.collection
+          #host-content
+            != messages()
+              block content
+      #party-view(style="display: none; background-color: red;")
+        .container
+            block party-content
+      #snackbar
       //- #particles
       //- script(src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js")
       //- script.
@@ -282,41 +312,3 @@ html(lang='en')
             i(class="material-icons playback" id="play_pause_image") play_arrow 
           button(class="waves-effect btn-flat" id="next")
             i(class="material-icons playback") fast_forward
-
-    //- nav.nav-wrapper
-    //-   a(href="/" id="auxme-logo" class="brand-logo" style="padding-left:10px") AuxMe
-    //-   //- a(href="/" class="waves-effect waves-teal btn-flat") AuxMe
-    //-   ul(id="nav-mobile" class="right hide-on-med-and-down")
-    //-     if user
-    //-       li(class=(title == 'Members' ? 'active' : ''))
-    //-         a(href='/members') Members
-    //-       li(class=(title == 'Spotify' ? 'active' : ''))
-    //-         a(href='/host') Host
-    //-       li(class=(title == 'Logout' ? 'active' : ''))
-    //-         a(href='/users/logout') Logout
-    //-     if !user
-    //-       li(class=(title == 'Join' ? 'active' : ''))
-    //-         a(href='/join') Join Party
-    //-       li(class=(title == 'Register' ? 'active' : ''))
-    //-         a(href='/users/register') Register
-    //-       li(class=(title == 'Login' ? 'active' : ''))
-    //-         a(href='/users/login') Login
-    //- #particles
-    //- //- particles.js lib - https://github.com/VincentGarreau/particles.js
-    //- script(src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js")
-    //- script.
-    //-   // Don't load particles on mobile
-    //-   if (screen && screen.width > 480) {
-    //-     //- const particlesCDN =  document.createElement('script');
-    //-     const particlesScript =  document.createElement('script');
-    //-     //- particlesCDN.src = 'http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js';
-    //-     particlesScript.src = '/javascripts/particles.js';
-    //-     //- document.head.appendChild(particlesCDN);
-    //-     document.head.appendChild(particlesScript);
-    //-     //- document.write('<script type="text/javascript" src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
-    //-   }
-    //- //- particles javascript file
-    //- //- script(src="/javascripts/particles.js" type="text/javascript")
-    //- .container
-    //-   != messages()
-    //-   block content

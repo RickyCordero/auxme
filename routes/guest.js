@@ -14,9 +14,12 @@ const redirect_uri = 'http://localhost:3000/guest/spotify/callback/'; // Your re
 
 const stateKey = 'spotify_auth_state';
 
+let queue = require('./shared').queue;
+
 let hostSpotifyToken;
 let guestSpotifyAccessToken;
 let guestSpotifyRefreshToken;
+let room;
 
 /**
  * Generates a random string containing numbers and letters
@@ -47,17 +50,57 @@ function ensureSpotifyAuthenticated(req, res, next) {
 
 module.exports = function (io) {
 
-    console.log('io from guest.js');
-    console.log(io);
+    // console.log('io from guest.js');
+    // console.log(io);
 
-    io.on('connection', function (socket) {
-        console.log('a guest has connected to the guest page');
+    // io.on('connection', function (socket) {
+    //     console.log('a guest has connected to the guest page');
 
-        socket.on('guest-join', data => {
-            console.log('got the guest-join');
-            console.log(data);
-        });
-    });
+    //     socket.on('guest-join', data => {
+    //         console.log('got the guest-join');
+    //         console.log(data);
+    //     });
+    // });
+
+    // io.on('connection', function (socket) {
+    //     socket.on('host-join', data => {
+    //         room = data.partyCode;
+    //         console.log(`a host has connected`);
+    //         console.log(data);
+    //         console.log(room);
+    //         socket.join(room);
+    //         io.to(room).emit('ack', { message: `a host has joined a room with party code ${partyCode}` });
+    //     });
+    //     socket.on('guest-join', data => {
+    //         const room = data.room;
+    //         console.log(data);
+    //         console.log(room);
+    //         console.log(`going to join the room: ${room}`);
+    //         socket.join(room);
+    //         io.to(room).emit('guest-join', `${data.displayName} has joined the room`);
+    //     });
+    //     socket.on('got-token', data => {
+    //         console.log('got the access token');
+    //         console.log(data);
+    //         io.to(room).emit('ack', { token: data });
+    //     });
+    //     socket.on('render-queue', data => {
+    //         console.log('going to render the queue');
+    //         console.log(data);
+    //         io.to(room).emit('render-queue');
+    //     });
+    //     socket.on('update-snackbar', data => {
+    //         console.log('going to update the snackbar');
+    //         console.log(data);
+    //         io.to(room).emit('update-snackbar', data.message);
+    //     });
+    //     socket.on('update-now-playing', data => {
+    //         console.log('going to update the now playing info');
+    //         console.log(data);
+    //         io.to(room).emit('update-now-playing', data);
+    //     });
+
+    // });
 
     router.get('/', function (req, res, next) {
         res.render('guest');
@@ -216,6 +259,28 @@ module.exports = function (io) {
             });
         }
 
+    });
+
+    router.get('/spotify/getqueue', function (req, res, next) {
+        res.send({
+            queue: queue
+        })
+    });
+
+    router.get('/shiftqueue', function (req, res) {
+        queue.shift();
+        res.send({ queue: queue });
+    });
+
+    router.get('/clearqueue', function (req, res) {
+        queue.length = 0;
+        res.send({ queue: queue });
+    });
+
+    router.get('/removetrack', function (req, res) {
+        const track = req.query.track;
+        queue = queue.filter(x => hash(x) !== hash(track));
+        res.send({queue:queue});
     });
 
     router.get('/spotify/access_token', function (req, res) {

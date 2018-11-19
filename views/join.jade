@@ -14,6 +14,6 @@ block content
     script.
         $('#joinButton').on('click', event => {
             const displayName = $('#display-name').val();
-            const pin = $('#pin').val();
+            const pin = $('#party-code').val();
             window.location.replace(`/guest/displayName/${displayName}/pin/${pin}`);
         });

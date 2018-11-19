@@ -19,11 +19,13 @@ const Player = require('./player');
 
 let global_access_token;
 let global_refresh_token;
-const queue = [];
+
+let queue = require('./shared').queue;
+
 let tokens = [];
 let all_users = [];
 const players = [];
-let partyCode;
+let room; // partyCode
 
 /**
  * Generates a random string containing numbers and letters
@@ -60,48 +62,48 @@ function ensureSpotifyAuthenticated(req, res, next) {
 
 module.exports = function (io) {
 
-    console.log('io from host.js');
-    console.log(io);
+    // console.log('io from host.js');
+    // console.log(io);
 
-    io.on('connection', function (socket) {
-        socket.on('host-join', data => {
-            const partyCode = data.partyCode;
-            console.log(`a host has connected`);
-            console.log(data);
-            console.log(partyCode);
-            socket.join(partyCode);
-            socket.emit('ack', { message: `a host has joined a room with party code ${partyCode}` });
-        });
-        socket.on('guest-join', data => {
-            const room = data.room;
-            console.log(data);
-            console.log(room);
-            console.log(`going to join the room: ${room}`);
-            socket.join(room);
-            socket.emit('guest-join', `${data.displayName} has joined the room`);
-        });
-        socket.on('got-token', data => {
-            console.log('got the access token');
-            console.log(data);
-            socket.emit('ack', { token: data });
-        });
-        socket.on('render-queue', data => {
-            console.log('going to render the queue');
-            console.log(data);
-            socket.emit('render-queue');
-        });
-        socket.on('update-snackbar', data => {
-            console.log('going to update the snackbar');
-            console.log(data);
-            socket.emit('update-snackbar', data.message);
-        });
-        socket.on('update-now-playing', data => {
-            console.log('going to update the now playing info');
-            console.log(data);
-            socket.emit('update-now-playing', data);
-        });
+    // io.on('connection', function (socket) {
+    //     socket.on('host-join', data => {
+    //         room = data.partyCode;
+    //         console.log(`a host has connected`);
+    //         console.log(data);
+    //         console.log(room);
+    //         socket.join(room);
+    //         io.to(room).emit('ack', { message: `a host has joined a room with party code ${partyCode}` });
+    //     });
+    //     socket.on('guest-join', data => {
+    //         const room = data.room;
+    //         console.log(data);
+    //         console.log(room);
+    //         console.log(`going to join the room: ${room}`);
+    //         socket.join(room);
+    //         io.to(room).emit('guest-join', `${data.displayName} has joined the room`);
+    //     });
+    //     socket.on('got-token', data => {
+    //         console.log('got the access token');
+    //         console.log(data);
+    //         io.to(room).emit('ack', { token: data });
+    //     });
+    //     socket.on('render-queue', data => {
+    //         console.log('going to render the queue');
+    //         console.log(data);
+    //         io.to(room).emit('render-queue');
+    //     });
+    //     socket.on('update-snackbar', data => {
+    //         console.log('going to update the snackbar');
+    //         console.log(data);
+    //         io.to(room).emit('update-snackbar', data.message);
+    //     });
+    //     socket.on('update-now-playing', data => {
+    //         console.log('going to update the now playing info');
+    //         console.log(data);
+    //         io.to(room).emit('update-now-playing', data);
+    //     });
 
-    });
+    // });
 
     /* GET home page. */
     router.get('/', ensureSpotifyAuthenticated, function (req, res, next) {
@@ -345,6 +347,12 @@ module.exports = function (io) {
             queue.push(req.query);
             res.send({ queue: queue });
         }
+    });
+
+    router.get('/removetrack', ensureAuxMeAuthenticated, function (req, res) {
+        const track = req.query.track;
+        queue = queue.filter(x => hash(x) !== hash(track));
+        res.send({queue:queue});
     });
 
     router.get('/getqueue', ensureAuxMeAuthenticated, function (req, res) {
