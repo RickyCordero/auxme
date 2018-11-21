@@ -1,23 +1,24 @@
 extends layout
 
 block content
-  h1 Display Name: #{displayName}
-  h2 Pin: #{pin}
-  a(href="/guest/spotify/login" class="waves-effect btn-flat" id="spotify-login") Sign into spotify
-  a(href="/guest/apple/login" class="waves-effect btn-flat" id="apple-login") Sign into Apple Music
-  a(href="/guest/tidal/login" class="waves-effect btn-flat" id="tidal-login") Sign into Tidal
-  a(href="/guest/soundcloud/login" class="waves-effect btn-flat" id="soundcloud-login") Sign into Soundcloud
+  h1 Welcome, #{displayName}
+  h2 Party: #{pin}
+  //- a(href="/guest/spotify/login" class="waves-effect btn-flat" id="spotify-login") Sign into spotify
+  //- a(href="/guest/apple/login" class="waves-effect btn-flat" id="apple-login") Sign into Apple Music
+  //- a(href="/guest/tidal/login" class="waves-effect btn-flat" id="tidal-login") Sign into Tidal
+  //- a(href="/guest/soundcloud/login" class="waves-effect btn-flat" id="soundcloud-login") Sign into Soundcloud
   #players-list
   #queue-container
     #queue-items
-  button(class="waves-effect btn-flat" id="show-players") Show players
-  button(class="waves-effect btn-flat" id="trigger") Trigger
-  button(class="waves-effect btn-flat" id="obtain-new-token") Refresh token
+  //- button(class="waves-effect btn-flat" id="show-players") Show players
+  //- button(class="waves-effect btn-flat" id="trigger") Trigger
+  //- button(class="waves-effect btn-flat" id="obtain-new-token") Refresh token
   #playlist-container
     #playlist-items
   #snackbar
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js")
   script.
+    let hostToken;
     let spotifyToken;
     let appleToken;
     let tidalToken;
@@ -93,19 +94,26 @@ block content
       });
     };
 
-    const pushQueue = (payload) => {
-      $.get('/guest/spotify/pushqueue', payload, (data, status) => {
+    //- const pushQueue = (payload) => {
+    //-   $.get('/host/pushqueue', payload, (data, status) => {
+    //-     updateSnackbar(`Added ${payload.name} to the guest queue`);
+    //-     console.log(data);
+    //-     console.log(status);
+    //-   });
+    //- };
+
+    const pushQueue = (payload, idx) => {
+      $.get('/host/pushqueue', payload, (data, status) => {
         if (data.question){ // tried to update queue but got duplicate track
           if(confirm(data.question)){
             payload.forcepush = true;
-            pushQueue(payload);
-            //- renderQueue();
+            pushQueue(payload, idx);
             socketIO.emit('render-queue');
           } else {
-            //- queue not updated
+            //- user pressed cancel, queue not updated
           }
         } else { // updated queue successfully
-          updateSnackbar(`Added ${payload.name} to the queue`);
+          socketIO.emit('update-snackbar', {message:`Added ${payload.name} to the queue`});
           console.log(data);
           console.log(status);
           //- TODO: Implement socket io event to emit signal to render all sockets' queue
@@ -113,24 +121,24 @@ block content
       });
     };
 
-    const updatePlayback = () => {
-      setTimeout(()=>{
-        $.get('/guest/spotify/playback-state', (data, status) => {
-          console.log("here's the current playback state");
-          console.log(data);
-          if(Object.keys(data.data.body).length && data.data.body.is_playing){
-            console.log('render pause button');
-            $('#play_pause_image').text('pause');
-            // render pause button
-          } else {
-            console.log('render play button');
-            $('#play_pause_image').text('play_arrow');
-            //- render play button
-          }
-        });
-      }, 500); // WAIT HALF A SECOND TO GET STATE
-      console.log('Play/paused!');
-    };
+    //- const updatePlayback = () => {
+    //-   setTimeout(()=>{
+    //-     $.get('/guest/spotify/playback-state', (data, status) => {
+    //-       console.log("here's the current playback state");
+    //-       console.log(data);
+    //-       if(Object.keys(data.data.body).length && data.data.body.is_playing){
+    //-         console.log('render pause button');
+    //-         $('#play_pause_image').text('pause');
+    //-         // render pause button
+    //-       } else {
+    //-         console.log('render play button');
+    //-         $('#play_pause_image').text('play_arrow');
+    //-         //- render play button
+    //-       }
+    //-     });
+    //-   }, 500); // WAIT HALF A SECOND TO GET STATE
+    //-   console.log('Play/paused!');
+    //- };
 
     //- On guest join via client
     socketIO.on('connect', socket => {
@@ -150,13 +158,27 @@ block content
     //- Listen for guest-join signal from server (only other guests)
     socketIO.on('guest-join', data => {
       console.log(data);
-      updateSnackbar(data.message);
+      const message = `guest "${data.displayName}" has joined the room`;
+      updateSnackbar(message);
     });
 
     //- Listen for guest-join signal from server
     socketIO.on('host-spotify-access-token', data => {
+      hostToken = data.token;
+      const spotifyHtml = `
+      <li>
+          <a class="white-text">Spotify Connected</a>
+      </li>
+      `;
+      //- $('#connected-accounts').append(spotifyHtml);
+      $('#sidenav-left').append(spotifyHtml);
+    });
+
+    //- Listen for render-queue signal from server
+    socketIO.on('push-queue', data => {
+      console.log('going to push a track to the queue using socket.io');
       console.log(data);
-      //- updateSnackbar(`host spotify access token: ${data.token}`);
+      pushQueue(data.payload);
     });
 
     //- Listen for render-queue signal from server
@@ -213,7 +235,15 @@ block content
 
       document.title = data.name;
       //- Change the playback button state
-      updatePlayback();
+      //- updatePlayback();
+    });
+
+    socketIO.on('play', data => {
+      $('#play_pause_image').text('play_arrow');
+    });
+
+    socketIO.on('pause', data => {
+      $('#play_pause_image').text('pause');
     });
 
     $('#trigger').on('click', event => {
@@ -268,52 +298,10 @@ block content
       });
     });
 
-    $('#show-playlists').on('click', event => {
-      const speed = 500;
-      if(!$('#playlist-container').is(':visible')){
-        $('#playlist-items').empty();
-        $.get('/guest/spotify/myplaylists', (playlistData, status) => {
-          const playlists = playlistData.data.body.items;
-          playlists.forEach((playlist, playlistIdx) => {
-            if(playlist.images.length > 0){
-              const playlistItemHtml = `
-              <div class="card small playlist-items" id="playlist_${playlistIdx}">
-                <div class="card-image playlist-image">
-                  <img src="${playlist.images[0].url}">
-                </div>
-                <div class="card-content playlist-title">${playlist.name}</div>
-              </div>
-              `;
-              $('#playlist-items').append(playlistItemHtml);
-              $(`#playlist_${playlistIdx}`).on('click', function(event){
-                $.get('/spotify/playlist-tracks', { playlist_id : playlist.id }, (playlistTracksData, status) => {
-                  const playlistTracks = playlistTracksData.tracks;
-                  playlistTracks.forEach((playlistTrack, trackIdx) => {
-                    const track = playlistTrack.track;
-                    const minutes = Math.floor(track.duration_ms / 60000);
-                    let seconds = Math.round((track.duration_ms / 1000) - 60*minutes);
-                    const imageUrl = track.album.images[2].url;// 64 x 64
-                    const payload = {
-                      artists: track.artists.map(x=>x.name).join(', '),
-                      name: track.name,
-                      minutes: minutes,
-                      seconds: seconds,
-                      uri: track.uri,
-                      imageUrl: track.album.images[1].url
-                    };
-                    pushQueue(payload);
-                  });
-                  renderQueue();
-                });
-              });
-            } else {
-              //- TODO: Determine what to render as html instead of nothing!
-              console.log('yo, the playlist has no images');
-            }
-          });
-        });
-      }
-      $("#playlist-container").slideToggle(speed);
+    $("#close-search").on('click', event => {
+      $('#search').val('');
+      $('#search-content').hide('slow');
+      $("#host-content").show('slow');
     });
 
     // Search
@@ -321,43 +309,48 @@ block content
       if(event.target.value){
         $("#host-content").hide('slow');
         $('#search-content').show('slow');
-        $.get('/guest/search', { searchKey: event.target.value, limit: 20, offset: 0 }, (searchResults, status) => {
-          $('#search_results').empty();
-          setTimeout(()=>{
-            searchResults.forEach((result, resultIdx)=>{
-              const artists = result.artists.map(x=>x.name).join(', ');
-              const name = result.name;
-              const minutes = Math.floor(result.duration_ms / 60000);
-              let seconds = Math.round((result.duration_ms / 1000) - 60*minutes);
-              const imageUrl = result.album.images[2].url;// 64 x 64
-              const card = `
-              <li class="collection-item avatar" id="result_${resultIdx}">
-                <img src="${imageUrl}" class="circle">
-                <span class="title">${name}</span>
-                <p>${artists}</p>
-                <p>Length: ${minutes}:${seconds >= 10 ? seconds : "0"+seconds}</p>
-                <a class="secondary-content waves-effect waves-light btn" id="result_${resultIdx}_add">
-                  <i class="material-icons">add</i>
-                </a>
-              </li>
-              `;
-              $('#search_results').append(card);
+        if(hostToken){
+          $.get('/guest/search', { hostToken: hostToken, searchKey: event.target.value, limit: 20, offset: 0 }, (searchResults, status) => {
+            $('#search_results').empty();
+            setTimeout(()=>{
+              searchResults.forEach((result, resultIdx)=>{
+                const artists = result.artists.map(x=>x.name).join(', ');
+                const name = result.name;
+                const minutes = Math.floor(result.duration_ms / 60000);
+                let seconds = Math.round((result.duration_ms / 1000) - 60*minutes);
+                const imageUrl = result.album.images[2].url;// 64 x 64
+                const card = `
+                <li class="collection-item avatar" id="result_${resultIdx}">
+                  <img src="${imageUrl}" class="circle">
+                  <span class="title">${name}</span>
+                  <p>${artists}</p>
+                  <p>Length: ${minutes}:${seconds >= 10 ? seconds : "0"+seconds}</p>
+                  <a class="secondary-content waves-effect waves-light btn" id="result_${resultIdx}_add">
+                    <i class="material-icons">add</i>
+                  </a>
+                </li>
+                `;
+                $('#search_results').append(card);
 
-              $(`#result_${resultIdx}_add`).on('click', event=>{
-                const payload = {
-                  artists: artists,
-                  name: name,
-                  minutes: minutes,
-                  seconds: seconds,
-                  uri: result.uri,
-                  imageUrl: result.album.images[1].url
-                };
-                pushQueue(payload);
-                socketIO.emit('render-queue');
+                $(`#result_${resultIdx}_add`).on('click', event=>{
+                  const payload = {
+                    artists: artists,
+                    name: name,
+                    minutes: minutes,
+                    seconds: seconds,
+                    uri: result.uri,
+                    imageUrl: result.album.images[1].url
+                  };
+                  pushQueue(payload);
+                  socketIO.emit('render-queue');
+                });
               });
-            });
-          },5);
-        });
+            },5);
+          });
+        } else {
+          updateSnackbar('Please sign into Spotify');
+        }
+
       } else {
         $('#search_results').empty();
         $("#host-content").show('slow');

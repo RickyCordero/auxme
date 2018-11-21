@@ -243,6 +243,24 @@ html(lang='en')
       #host-content{
 
       }
+      .nav-wrapper{
+        /*display: flex;*/
+      }
+      /*
+      .nav-wrapper .input-field input[type=search] {
+        width: 200%;
+      }*/
+      .input-field{
+        
+      }
+      .search{
+        
+      }
+      .connected-accounts{
+        color: white;
+        text-align: left;
+        padding-left: 5px;
+      }
   body
     header
       nav.search
@@ -254,7 +272,7 @@ html(lang='en')
                 input(id='search', placeholder='Search', type='search', required='')
                 label.label-icon(for='search')
                   i.material-icons.menu search
-                i.material-icons.closed close
+                i.material-icons.closed(id="close-search") close
     main
       ul(id="sidenav-left" class="sidenav sidenav-fixed")
         a(href="/")
@@ -278,6 +296,7 @@ html(lang='en')
             a(id="register-link" href='/users/register', class="waves-effect white-text") Register
           li(class=(title == 'Join' ? 'active' : ''))
             a(id="join-link" href='/join', class="waves-effect white-text") Join Party
+        //- #connected-accounts
       #host-view
         .container
           #search-content(style="display: none;")

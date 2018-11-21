@@ -5,11 +5,11 @@ block content
   #queue-container
     #queue-items
 
-  button(class="waves-effect btn-flat" id="show-players") Show players
+  //- button(class="waves-effect btn-flat" id="show-players") Show players
   button(class="waves-effect btn-flat" id="show-playlists") Show playlists
   button(class="waves-effect btn-flat" id="clearqueue") Clear queue
-  button(class="waves-effect btn-flat" id="trigger") Trigger
-  button(class="waves-effect btn-flat" id="obtain-new-token") Refresh token
+  //- button(class="waves-effect btn-flat" id="trigger") Trigger
+  //- button(class="waves-effect btn-flat" id="obtain-new-token") Refresh token
   #playlist-container
     #playlist-items
   #search_results.collection
@@ -56,10 +56,12 @@ block content
             console.log('render pause button');
             $('#play_pause_image').text('pause');
             // render pause button
+            socketIO.emit('pause');
           } else {
             console.log('render play button');
             $('#play_pause_image').text('play_arrow');
             //- render play button
+            socketIO.emit('play');
           }
         });              
       }, 500); // WAIT HALF A SECOND TO GET STATE
@@ -200,13 +202,28 @@ block content
     //- Listen for guest-join signal from server
     socketIO.on('guest-join', data => {
       console.log(data);
-      updateSnackbar(data.message);
+      const message = `guest "${data.displayName}" has joined the room`;
+      updateSnackbar(message);
+      socketIO.emit('host-spotify-access-token', {token: token});
     });
 
     //- Listen for guest-join signal from server
     socketIO.on('host-spotify-access-token', data => {
       console.log(data);
       //- updateSnackbar(`host spotify access token: ${data.token}`);
+    });
+
+    //- Listen for guest-join signal from server
+    socketIO.on('get-host-spotify-access-token', data => {
+      console.log(data);
+      socketIO.emit('host-spotify-access-token', {token: token});
+    });
+
+    //- Listen for render-queue signal from server
+    socketIO.on('push-queue', data => {
+      console.log('going to push a track to the queue using socket.io');
+      console.log(data);
+      pushQueue(data.payload, data.idx);
     });
 
     //- Listen for render-queue signal from server
@@ -449,6 +466,12 @@ block content
           //- socketIO.emit('update-snackbar', {message:`Ready with Device ID ${device_id}`});
         });
 
+
+        $("#close-search").on('click', event => {
+          $('#search').val('');
+          $('#search-content').hide('slow');
+          $("#host-content").show('slow');
+        });
 
         // Search
         $('#search').on('input', event => {

@@ -6,6 +6,8 @@ const app = express();
 const io = socketIO();
 app.io = io;
 
+const hash = require('object-hash');
+
 const path = require('path');
 const favicon = require('serve-favicon');
 const logger = require('morgan');
@@ -22,7 +24,7 @@ const bcrypt = require('bcryptjs');
 
 const mongo = require('mongodb');
 const mongoose = require('mongoose');
-const db = mongoose.connection;
+const db = mongoose.connection; 
 
 // import routes
 const routes = require('./routes/index')(io);
@@ -30,7 +32,10 @@ const users = require('./routes/users')(io);
 const host = require('./routes/host')(io);
 const guest = require('./routes/guest')(io);
 
+const Player = require('./player');
+
 let room;
+let players = [];
 
 // io.on('connection', function (socket) {
 //   console.log('a user has connected in app.js');
@@ -40,24 +45,35 @@ io.on('connection', function (socket) {
   console.log('a connection has been made');
   socket.on('host-join', data => {
     room = data.partyCode;
-    console.log(`a host has connected from the server side`);
     console.log(data);
     socket.join(room);
-    io.emit('host-join', { message: `a host has joined a room with party code ${room}` });
+    socket.broadcast.to(room).emit('host-join', { message: `a host has joined a room with party code ${room}` });
   });
   socket.on('guest-join', data => {
     console.log(data);
-    const message = `guest "${data.displayName}" has joined the room: ${data.room}`;
-    console.log(message);
     socket.join(data.room);
+    players.push(new Player(hash(data), data.displayName));
+    console.log('updated the players');
+    console.log(players);
     // tell all guests that you've arrived
-    socket.broadcast.emit('guest-join', { message: message });
+    // socket.broadcast.emit('guest-join', { message: message });
+    socket.broadcast.to(data.room).emit('guest-join', data);
+  });
+  socket.on('get-host-spotify-access-token', data => {
+    console.log("a request has been made for the host's spotify token");
+    console.log(data);
+    socket.broadcast.emit('get-host-spotify-access-token');
   });
   socket.on('host-spotify-access-token', data => {
     console.log("got the host's spotify access token");
     console.log(data);
     // sending access token to all clients except host
-    socket.broadcast.emit('host-spotify-access-token', { token: data.token });
+    socket.broadcast.to(room).emit('host-spotify-access-token', { token: data.token });
+  });
+  socket.on('push-queue', data => {
+    console.log('going to render the queue');
+    console.log(data);
+    io.emit('push-queue', {payload: data.payload, idx: data.idx});
   });
   socket.on('render-queue', data => {
     console.log('going to render the queue');
@@ -83,6 +99,14 @@ io.on('connection', function (socket) {
     console.log('going to update the now playing info');
     console.log(data);
     io.emit('update-now-playing', data);
+  });
+  socket.on('play', () => {
+    console.log('change to play state');
+    io.emit('play');
+  });
+  socket.on('pause', () => {
+    console.log('change to pause state');
+    io.emit('pause');
   });
 
 });

@@ -15,8 +15,6 @@ const SpotifyWebApi = require('spotify-web-api-node');
 
 const spotifyApi = new SpotifyWebApi();
 
-const Player = require('./player');
-
 let global_access_token;
 let global_refresh_token;
 
@@ -198,13 +196,7 @@ module.exports = function (io) {
                     // TODO: Figure out how to store these tokens per user per session
                     global_access_token = body.access_token;
                     global_refresh_token = body.refresh_token;
-                    loggedIn = true;
-                    // tokens.push(body.access_token);
-                    const playerId = Math.random() * 9999;
-                    console.log(playerId);
-                    players.push(new Player(playerId, 'This is a name', {
-                        spotify: body.access_token
-                    }));
+
                     // const options = {
                     //     url: 'https://api.spotify.com/v1/me',
                     //     headers: { 'Authorization': 'Bearer ' + access_token },
@@ -335,7 +327,7 @@ module.exports = function (io) {
         });
     });
 
-    router.get('/pushqueue', ensureAuxMeAuthenticated, function (req, res) {
+    router.get('/pushqueue', function (req, res) {
         if (queue.map(x => hash(x)).includes(hash(req.query))) {
             if (req.query.forcepush) {
                 queue.push(req.query);
@@ -420,7 +412,8 @@ module.exports = function (io) {
     });
 
     router.get('/generate-party-code', ensureAuxMeAuthenticated, function (req, res) {
-        partyCode = 1234;
+        // partyCode = 1234;
+        partyCode = Math.floor(Math.random() * 90000) + 10000; // new pin for game
         res.send({ partyCode: partyCode });
     });
 

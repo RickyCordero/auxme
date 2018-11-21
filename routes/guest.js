@@ -116,6 +116,8 @@ module.exports = function (io) {
         const searchKey = req.query.searchKey;
         const limit = req.query.limit;
         const offset = req.query.offset;
+        const hostToken = req.query.hostToken;
+        spotifyApi.setAccessToken(hostToken);
         if (searchKey) {
             spotifyApi
                 .searchTracks(searchKey, { limit: limit, offset: offset })
