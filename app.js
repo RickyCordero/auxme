@@ -24,89 +24,154 @@ const bcrypt = require('bcryptjs');
 
 const mongo = require('mongodb');
 const mongoose = require('mongoose');
-const db = mongoose.connection; 
+const db = mongoose.connection;
 
 // import routes
+let games = [];
 const routes = require('./routes/index')(io);
 const users = require('./routes/users')(io);
-const host = require('./routes/host')(io);
-const guest = require('./routes/guest')(io);
+const host = require('./routes/host')(io, games);
+const guest = require('./routes/guest')(io, games);
 
 const Player = require('./player');
+const Game = require('./game');
 
-let room;
-let players = [];
 
-// io.on('connection', function (socket) {
-//   console.log('a user has connected in app.js');
-// });
+
+const printGames = () => {
+  console.log(JSON.stringify(games, null, 4));
+};
+
+const socketIdToGame = (socketId) => {
+  let g;
+  games.forEach((game, gameIdx) => {
+    game.players.forEach((player, playerIdx) => {
+      if (player.socketId == socketId) {
+        g = game;
+      }
+    });
+  });
+  return g;
+};
+
+const roomToGame = (room) => {
+  games.forEach((game, gameIdx) => {
+    if (parseInt(game.partyId) == parseInt(room)) {
+      return game;
+    }
+  });
+  return null;
+};
 
 io.on('connection', function (socket) {
+
   console.log('a connection has been made');
+  console.log(socket.id); // socketId is the default room the socket is in
+  console.log(io.sockets.adapter.rooms);
   socket.on('host-join', data => {
-    room = data.partyCode;
-    console.log(data);
-    socket.join(room);
-    socket.broadcast.to(room).emit('host-join', { message: `a host has joined a room with party code ${room}` });
+    socket.join(data.partyCode, () => {
+      console.log(data);
+      const host = new Player(hash(data), socket.id, data.hostName, data.partyCode);
+      const g = new Game(host, [host], data.partyCode, data.partyName, []);
+      games.push(g);
+      games = games.filter(game => Object.keys(io.sockets.adapter.rooms).includes(`${game.partyId}`));
+      printGames();
+      socket.broadcast.to(data.partyCode).emit('host-join', { message: `a host has joined a room with party code ${data.partyCode}` });
+    });
+  });
+  socket.on('disconnect', _data => {
+    let p;
+    printGames();
+    games.forEach((game, gameIdx) => {
+      game.players.forEach((player, playerIdx) => {
+        if (player.socketId == socket.id) {
+          p = player;
+          game.players.splice(playerIdx, 1); // modifies players array in place
+          console.log(`removed player ${p.displayName} with socketid ${socket.id} in room ${p.room}`);
+        }
+      });
+    });
+    printGames();
+    if (p) {
+      io.in(p.room).emit('guest-leave', { displayName: p.displayName, room: p.room, socketId: socket.id });
+    } else {
+      // user left a room but never joined a game
+    }
   });
   socket.on('guest-join', data => {
     console.log(data);
-    socket.join(data.room);
-    players.push(new Player(hash(data), data.displayName));
-    console.log('updated the players');
-    console.log(players);
-    // tell all guests that you've arrived
-    // socket.broadcast.emit('guest-join', { message: message });
-    socket.broadcast.to(data.room).emit('guest-join', data);
+    games.forEach((game, gameIdx) => {
+      if (parseInt(game.partyId) == parseInt(data.room)) {
+        socket.join(data.room); // join the room if there exists a game with this pin code
+        // tell all guests that you've arrived
+        // socket.broadcast.emit('guest-join', { message: message });
+        const guest = new Player(hash(data), socket.id, data.displayName, data.room);
+        game.players.push(guest);
+        socket.broadcast.to(data.room).emit('guest-join', data);
+        console.log('updated the players');
+      } else {
+        socket.emit('no-game-found', { partyCode: data.room });
+      }
+    });
   });
   socket.on('get-host-spotify-access-token', data => {
     console.log("a request has been made for the host's spotify token");
     console.log(data);
-    socket.broadcast.emit('get-host-spotify-access-token');
+    socket.broadcast.emit('get-host-spotify-access-token', data);
   });
   socket.on('host-spotify-access-token', data => {
+    const room = socketIdToGame(socket.id).partyId;
     console.log("got the host's spotify access token");
     console.log(data);
     // sending access token to all clients except host
     socket.broadcast.to(room).emit('host-spotify-access-token', { token: data.token });
   });
   socket.on('push-queue', data => {
+    const room = socketIdToGame(socket.id).partyId;
     console.log('going to render the queue');
     console.log(data);
-    io.emit('push-queue', {payload: data.payload, idx: data.idx});
+    io.in(room).emit('push-queue', { payload: data.payload, idx: data.idx });
   });
   socket.on('render-queue', data => {
+    console.log(data);
+    const game = socketIdToGame(socket.id);
+    const room = game.partyId;
     console.log('going to render the queue');
-    // console.log(data);
-    io.emit('render-queue');
+    io.in(room).emit('render-queue');
   });
   socket.on('clear-queue', data => {
+    console.log(data);
+    const room = socketIdToGame(socket.id).partyId;
     console.log('going to clear the queue');
-    // console.log(data);
-    io.emit('clear-queue');
+    io.in(room).emit('clear-queue');
   });
   socket.on('remove-track-from-queue', data => {
+    console.log(data);
+    const room = socketIdToGame(socket.id).partyId;
     console.log('going to remove a track from the queue');
-    console.log(data);
-    io.emit('remove-track-from-queue', {track: data.track});
-  });  
+    io.in(room).emit('remove-track-from-queue', { track: data.track });
+  });
   socket.on('update-snackbar', data => {
-    console.log('going to update the snackbar');
     console.log(data);
-    io.emit('update-snackbar', data.message);
+    const room = socketIdToGame(socket.id).partyId;
+    console.log('going to update the snackbar');
+    io.in(room).emit('update-snackbar', data.message);
   });
   socket.on('update-now-playing', data => {
-    console.log('going to update the now playing info');
     console.log(data);
-    io.emit('update-now-playing', data);
+    const room = socketIdToGame(socket.id).partyId;
+    console.log('going to update the now playing info');
+    io.in(room).emit('update-now-playing', data);
   });
   socket.on('play', () => {
+    const room = socketIdToGame(socket.id).partyId;
     console.log('change to play state');
-    io.emit('play');
+    io.in(room).emit('play');
   });
   socket.on('pause', () => {
+    const room = socketIdToGame(socket.id).partyId;
     console.log('change to pause state');
-    io.emit('pause');
+    io.in(room).emit('pause');
   });
 
 });

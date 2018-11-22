@@ -5,8 +5,8 @@ const queryString = require('querystring');
 const _ = require('lodash');
 const hash = require('object-hash');
 
-const client_id = '67a661b7dd704e57a5a6f03ff226b04c'; // Your client id
-const client_secret = '5c7a14fe961745d999cb351294eab884'; // Your secret
+const client_id = process.env.SPOTIFY_CLIENT_ID; // Your client id
+const client_secret = process.env.SPOTIFY_CLIENT_SECRET; // Your secret
 const redirect_uri = 'http://localhost:3000/host/spotify/callback/'; // Your redirect uri
 
 const stateKey = 'spotify_auth_state';
@@ -49,7 +49,7 @@ function ensureAuxMeAuthenticated(req, res, next) {
 
 // TODO: Determine how to check if a user has signed into their Spotify account
 function ensureSpotifyAuthenticated(req, res, next) {
-    console.log(req.cookies);
+    // console.log(req.cookies);
     // const isLoggedIntoSpotify = req.cookies[stateKey];
     const isLoggedIntoSpotify = false;
     if (isLoggedIntoSpotify) {
@@ -58,50 +58,7 @@ function ensureSpotifyAuthenticated(req, res, next) {
     res.redirect('/host/spotify-login');
 }
 
-module.exports = function (io) {
-
-    // console.log('io from host.js');
-    // console.log(io);
-
-    // io.on('connection', function (socket) {
-    //     socket.on('host-join', data => {
-    //         room = data.partyCode;
-    //         console.log(`a host has connected`);
-    //         console.log(data);
-    //         console.log(room);
-    //         socket.join(room);
-    //         io.to(room).emit('ack', { message: `a host has joined a room with party code ${partyCode}` });
-    //     });
-    //     socket.on('guest-join', data => {
-    //         const room = data.room;
-    //         console.log(data);
-    //         console.log(room);
-    //         console.log(`going to join the room: ${room}`);
-    //         socket.join(room);
-    //         io.to(room).emit('guest-join', `${data.displayName} has joined the room`);
-    //     });
-    //     socket.on('got-token', data => {
-    //         console.log('got the access token');
-    //         console.log(data);
-    //         io.to(room).emit('ack', { token: data });
-    //     });
-    //     socket.on('render-queue', data => {
-    //         console.log('going to render the queue');
-    //         console.log(data);
-    //         io.to(room).emit('render-queue');
-    //     });
-    //     socket.on('update-snackbar', data => {
-    //         console.log('going to update the snackbar');
-    //         console.log(data);
-    //         io.to(room).emit('update-snackbar', data.message);
-    //     });
-    //     socket.on('update-now-playing', data => {
-    //         console.log('going to update the now playing info');
-    //         console.log(data);
-    //         io.to(room).emit('update-now-playing', data);
-    //     });
-
-    // });
+module.exports = function (io, games) {
 
     /* GET home page. */
     router.get('/', ensureSpotifyAuthenticated, function (req, res, next) {
@@ -252,18 +209,29 @@ module.exports = function (io) {
         });
     });
 
+    router.get('/spotify/mytracks', function (req, res) {
+        const limit = req.query.limit;
+        const offset = req.query.offset;
+        spotifyApi
+            .getMySavedTracks({ limit: limit, offset: offset })
+            .then(data => {
+                const total = data.body.total;
+                // console.log(data.body.items);
+                // const d = data.body.tracks.items;
+                res.send({ tracks: data.body.items, total: total });
+            })
+            .catch(err => console.error(err));
+    });
+
     router.get('/all_tokens', function (req, res) {
         res.send({ tokens: tokens });
     });
 
-    router.get('/add_user', function (req, res) {
-        const user = req.query.user;
-        users.push(user);
-        res.send({ users: users });
-    });
-
-    router.get('/all_users', function (req, res) {
-        res.send({ all_users: all_users });
+    router.get('/addplayer', function (req, res) {
+        const player = req.query.player;
+        console.log(player);
+        players.push(player);
+        res.send({ players: players });
     });
 
     router.get('/spotify/update_auth_token', function (req, res) {
@@ -344,7 +312,7 @@ module.exports = function (io) {
     router.get('/removetrack', ensureAuxMeAuthenticated, function (req, res) {
         const track = req.query.track;
         queue = queue.filter(x => hash(x) !== hash(track));
-        res.send({queue:queue});
+        res.send({ queue: queue });
     });
 
     router.get('/getqueue', ensureAuxMeAuthenticated, function (req, res) {

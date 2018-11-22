@@ -3,16 +3,18 @@ const request = require('request');
 const router = express.Router();
 
 const queryString = require('querystring');
+const hash = require('object-hash');
 
 const SpotifyWebApi = require('spotify-web-api-node');
-
 const spotifyApi = new SpotifyWebApi();
 
-const client_id = '67a661b7dd704e57a5a6f03ff226b04c'; // Your client id
-const client_secret = '5c7a14fe961745d999cb351294eab884'; // Your secret
+const client_id = process.env.SPOTIFY_CLIENT_ID; // Your client id
+const client_secret = process.env.SPOTIFY_CLIENT_SECRET; // Your secret
 const redirect_uri = 'http://localhost:3000/guest/spotify/callback/'; // Your redirect uri
 
 const stateKey = 'spotify_auth_state';
+
+const Game = require('../game');
 
 let queue = require('./shared').queue;
 
@@ -48,7 +50,7 @@ function ensureSpotifyAuthenticated(req, res, next) {
     res.redirect('/host/spotify-login');
 }
 
-module.exports = function (io) {
+module.exports = function (io, games) {
 
     // console.log('io from guest.js');
     // console.log(io);
@@ -264,6 +266,7 @@ module.exports = function (io) {
     });
 
     router.get('/spotify/getqueue', function (req, res, next) {
+        // const queue = Game.roomTo
         res.send({
             queue: queue
         })

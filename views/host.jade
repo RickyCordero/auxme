@@ -4,15 +4,16 @@ block content
   #players-list
   #queue-container
     #queue-items
-
-  //- button(class="waves-effect btn-flat" id="show-players") Show players
-  button(class="waves-effect btn-flat" id="show-playlists") Show playlists
+  button(class="waves-effect btn-flat" id="my-playlists") My playlists
   button(class="waves-effect btn-flat" id="clearqueue") Clear queue
-  //- button(class="waves-effect btn-flat" id="trigger") Trigger
   //- button(class="waves-effect btn-flat" id="obtain-new-token") Refresh token
+  button(class="waves-effect btn-flat" id="my-tracks") My tracks
   #playlist-container
     #playlist-items
   #search_results.collection
+  #pagination-container(style="display: none;")
+    ul(class="pagination", style="display: flex;")
+  #track-items.collection
   script(src="https://sdk.scdn.co/spotify-player.js")
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js")
   script.
@@ -37,6 +38,8 @@ block content
 
     let deviceId;
     let token;
+    let room;
+
     // Tell Socket.io client to connect to the '/spotify' namespace
     const socketIO = io.connect('http://localhost:3000/');
 
@@ -171,13 +174,10 @@ block content
         `;
         $('#party-code').empty();
         $('#party-code').append(partyHtml);
-        socketIO.emit('host-join', {partyCode:partyCode});
+        room = partyCode;
+        socketIO.emit('host-join', {hostName: 'Ricky', partyName: "Ricky's party", partyCode:partyCode});
       });
     };
-
-    $('#trigger').on('click', event => {
-      
-    });
 
     const clearQueue = () => {
       socketIO.emit('update-snackbar', {message:`Clearing queue`});
@@ -189,7 +189,6 @@ block content
 
     //- On host join via client
     socketIO.on('connect', data => {
-      console.log('a host has connected from the client side');
       generatePartyCode();
     });
     
@@ -199,24 +198,55 @@ block content
       updateSnackbar(data.message);
     });
 
+    const updatePlayers = () => {
+      $.get('/host/getplayers', (data, status)=>{
+        $('#player-items').empty();
+        console.log(data);
+        data.players.forEach((player, playerIdx)=>{
+          const playerHtml = `
+          <li class="collection-item avatar" id="player_${playerIdx}">
+            <span class="title">${player.displayName}</span>
+          </li>
+          `;
+          $('#player-items').append(playerHtml);
+        });
+      });
+    };
+
     //- Listen for guest-join signal from server
     socketIO.on('guest-join', data => {
       console.log(data);
       const message = `guest "${data.displayName}" has joined the room`;
       updateSnackbar(message);
-      socketIO.emit('host-spotify-access-token', {token: token});
+      //- socketIO.emit('host-spotify-access-token', {token: token});
+      $.get('/host/addplayer', {displayName:data.displayName, room: data.room, socketId: data.socketId}, (data, status) => {
+        console.log(data);
+        console.log(status);
+      });
+      updatePlayers();
     });
 
-    //- Listen for guest-join signal from server
-    socketIO.on('host-spotify-access-token', data => {
+    //- On guest join via client
+    socketIO.on('guest-leave', data => {
       console.log(data);
-      //- updateSnackbar(`host spotify access token: ${data.token}`);
+      const displayName = data.displayName;
+      const room = data.room;
+      updateSnackbar(`guest ${displayName} has left the room`);
     });
 
     //- Listen for guest-join signal from server
     socketIO.on('get-host-spotify-access-token', data => {
-      console.log(data);
-      socketIO.emit('host-spotify-access-token', {token: token});
+      console.log('handling get-host-spotify-access-token event with data:');
+      console.log(data.room);
+      console.log(room);
+      console.log(typeof(data.room));
+      console.log(typeof(room));
+      if(parseInt(data.room) == room){
+        console.log('sending token');
+        socketIO.emit('host-spotify-access-token', {token: token});
+      } else {
+        console.log("a request was made for this host's spotify access token");
+      }
     });
 
     //- Listen for render-queue signal from server
@@ -281,7 +311,7 @@ block content
       //- $.get('/spotify/all_users', function(data, status){
 
         token = data.access_token;
-        socketIO.emit('host-spotify-access-token', {token: data.access_token});
+        //- socketIO.emit('host-spotify-access-token', {token: data.access_token});
         //- const tokens = data.tokens;
         //- const token = tokens[0];
 
@@ -335,23 +365,118 @@ block content
 
         });
 
-        $('#show-players').on('click', event => {
-          //- $.get('/host/getplayers', (data, status)=>{
-          //-   console.log(data);
-          //-   $('#players-list').empty();
-          //-   data.players.forEach((player, playerId)=>{
-          //-     const html = `
-          //-     ID: ${player.id}
-          //-     <br>
-          //-     Nickname: ${player.nickname}
-          //-     <br>
-          //-     Spotify access token: ${player.auth.spotify}
-          //-     `;
-          //-     $('#players-list').append(html);
-          //-   });
-          //- });
+        const createPagination = (limit, offset) => {
+          $.get('/host/spotify/mytracks', {limit: limit, offset: offset}, (data, status)=>{
+            const totalTracks = data.total;
+            const pages = Math.ceil(totalTracks / limit);
+            let pagesHtml = '';
+            for(let i=1; i <= pages; i++){
+              pagesHtml+= `
+              <li id="page-${i}" class="waves-effect">
+                <a class="tracks-page-button" id="tracks-page-button-${i}" href="#">
+                  ${i}
+                </a>
+              </li>
+              `;
+              $(`#tracks-page-button-${i}`).on('click', event => {
+                $.get('/host/spotify/mytracks', {limit: limit, offset:limit*i}, (data, status) => {
+                  console.log(data);
+                  renderSavedTracks(data);
+                });
+                if(i==1){
+                  $('#left-pagination-arrow').addClass('disabled');
+                  $('#right-pagination-arrow').addClass('waves-effect');
+                } else if (i == pages){
+                  $('#left-pagination-arrow').addClass('waves-effect');
+                  $('#right-pagination-arrow').addClass('disabled');
+                }
+                $(`#page-${i}`).addClass('active');
+              });
+            };
+            const paginationHtml = `
+            <li id="left-pagination-arrow" class="disabled">
+              <a href="#!">
+                <i class="material-icons">
+                  chevron_left
+                </i>
+              </a>
+            </li>
+            ${pagesHtml}
+            <li id="right-pagination-arrow" class="waves-effect">
+              <a href="#!">
+                <i class="material-icons">
+                  chevron_right
+                </i>
+              </a>
+            </li>
+            `;
+            $('#pagination-container').append(paginationHtml);
+          });
+        };
+
+        const renderSavedTracks = (data) => {
+          $('#track-items').empty();
+          data.tracks.forEach((item, resultIdx) => {
+            const track = item.track;
+            const artists = track.artists.map(x=>x.name).join(', ');
+            const name = track.name;
+            const minutes = Math.floor(track.duration_ms / 60000);
+            let seconds = Math.round((track.duration_ms / 1000) - 60*minutes);
+            const imageUrl = track.album.images[2].url;// 64 x 64
+            const uri = track.uri;
+            const trackCardHtml = `
+            <li class="collection-item avatar" id="track_${resultIdx}">
+              <img src="${imageUrl}" class="circle">
+              <span class="title">${name}</span>
+              <p>${artists}</p>
+              <p>Length: ${minutes}:${seconds >= 10 ? seconds : "0"+seconds}</p>
+              <a class="secondary-content waves-effect waves-light btn" id="track_${resultIdx}_add">
+                <i class="material-icons">add</i>
+              </a>
+            </li>
+            `;
+            $('#track-items').append(trackCardHtml);
+
+            $(`#track_${resultIdx}`).on('dblclick', event=>{
+              socketIO.emit('update-snackbar', {message:`Playing ${name}`});
+              socketIO.emit('update-now-playing', {artists:artists, name:name, uri: uri});
+              const payload = {
+                uri: uri,
+                device_id: deviceId,
+                access_token: token
+              };
+              
+              $.get('/host/spotify/play', payload, (playData, playStatus) => {
+                document.title = track.name;
+              });
+            });
+
+            $(`#track_${resultIdx}_add`).on('click', event=>{
+              const payload = {
+                artists: artists,
+                name: name,
+                minutes: minutes,
+                seconds: seconds,
+                uri: uri,
+                imageUrl: track.album.images[1].url
+              };
+              pushQueue(payload, resultIdx);
+              //- renderQueue();
+              socketIO.emit('render-queue');
+            });
+          });
+        };
+
+        $('#my-tracks').on('click', event => {
+          $('#playlist-container').hide('slow');
+          const limit = 20;
+          const offset = 0;
+          createPagination(limit,offset);
+          $('#track-items').show('slow');
+          $('#pagination-container').show('slow');
         });
-        $('#show-playlists').on('click', event => {
+
+        $('#my-playlists').on('click', event => {
           const speed = 500;
           if(!$('#playlist-container').is(':visible')){
             $('#playlist-items').empty();
@@ -447,7 +572,6 @@ block content
         };
 
         $('#generate-party-code').on('click', event => {
-          console.log('clicked');
           generatePartyCode();
         });
 
@@ -570,4 +694,9 @@ block content
       });
     };
 block party-content
-  p This is the party content
+  //- button(class="waves-effect btn-flat" id="show-players") Show players
+  #player-items.collection
+  script.
+    //- $('#show-players').on('click', event=>{
+    //-   updatePlayers();
+    //- });

@@ -8,7 +8,6 @@ html(lang='en')
     script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js")
     //- Async
     script(src="https://cdnjs.cloudflare.com/ajax/libs/async/2.6.1/async.js")
-
     //- Google font
     link(href='https://fonts.googleapis.com/css?family=Comfortaa', rel='stylesheet')
     //- Materlalize css
@@ -304,7 +303,7 @@ html(lang='en')
           #host-content
             != messages()
               block content
-      #party-view(style="display: none; background-color: red;")
+      #party-view(style="display: none;")
         .container
             block party-content
       #snackbar

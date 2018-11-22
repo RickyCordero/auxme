@@ -11,7 +11,6 @@ block content
   #queue-container
     #queue-items
   //- button(class="waves-effect btn-flat" id="show-players") Show players
-  //- button(class="waves-effect btn-flat" id="trigger") Trigger
   //- button(class="waves-effect btn-flat" id="obtain-new-token") Refresh token
   #playlist-container
     #playlist-items
@@ -147,6 +146,16 @@ block content
       const payload = {displayName: displayName, room: pin};
       updateSnackbar(`joining room ${pin} with name ${displayName}`);
       socketIO.emit('guest-join', payload);
+      socketIO.emit('get-host-spotify-access-token', payload);
+    });
+
+    //- On guest join via client
+    socketIO.on('guest-leave', data => {
+      console.log(data);
+      //- const displayName = data.displayName;
+      //- const pin = data.room;
+      //- const payload = {displayName: displayName, room: pin};
+      updateSnackbar(`a user has left the room`);
     });
 
     //- Listen for host-join signal from server
@@ -160,6 +169,10 @@ block content
       console.log(data);
       const message = `guest "${data.displayName}" has joined the room`;
       updateSnackbar(message);
+    });
+
+    socketIO.on('no-game-found', data => {
+      updateSnackbar(`No game was found with party code:${data.partyCode}`);
     });
 
     //- Listen for guest-join signal from server
@@ -244,10 +257,6 @@ block content
 
     socketIO.on('pause', data => {
       $('#play_pause_image').text('pause');
-    });
-
-    $('#trigger').on('click', event => {
-      //- socketIO.emit('user-join', {my: "data"});
     });
 
     renderQueue();
