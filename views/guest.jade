@@ -172,7 +172,7 @@ block content
     });
 
     socketIO.on('no-game-found', data => {
-      updateSnackbar(`No game was found with party code:${data.partyCode}`);
+      updateSnackbar(`No game was found with party code: ${data.partyCode}`);
     });
 
     //- Listen for guest-join signal from server

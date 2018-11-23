@@ -12,7 +12,10 @@ block content
     #playlist-items
   #search_results.collection
   #pagination-container(style="display: none;")
-    ul(class="pagination", style="display: flex;")
+    ul(id="pagination-list", class="pagination", style="display: block; margin: 0 50px;")
+      li(id="left-pagination-arrow" class="disabled")
+      #pagination-between
+      li(id="right-pagination-arrow" class="waves-effect")
   #track-items.collection
   script(src="https://sdk.scdn.co/spotify-player.js")
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js")
@@ -366,51 +369,62 @@ block content
         });
 
         const createPagination = (limit, offset) => {
+          $('#left-pagination-arrow').empty();
+          $('#pagination-between').empty();
+          $('#right-pagination-arrow').empty();
+          console.log('creating the pagination');
           $.get('/host/spotify/mytracks', {limit: limit, offset: offset}, (data, status)=>{
-            const totalTracks = data.total;
-            const pages = Math.ceil(totalTracks / limit);
-            let pagesHtml = '';
-            for(let i=1; i <= pages; i++){
-              pagesHtml+= `
-              <li id="page-${i}" class="waves-effect">
-                <a class="tracks-page-button" id="tracks-page-button-${i}" href="#">
-                  ${i}
-                </a>
-              </li>
-              `;
-              $(`#tracks-page-button-${i}`).on('click', event => {
-                $.get('/host/spotify/mytracks', {limit: limit, offset:limit*i}, (data, status) => {
-                  console.log(data);
-                  renderSavedTracks(data);
-                });
-                if(i==1){
-                  $('#left-pagination-arrow').addClass('disabled');
-                  $('#right-pagination-arrow').addClass('waves-effect');
-                } else if (i == pages){
-                  $('#left-pagination-arrow').addClass('waves-effect');
-                  $('#right-pagination-arrow').addClass('disabled');
-                }
-                $(`#page-${i}`).addClass('active');
-              });
-            };
-            const paginationHtml = `
-            <li id="left-pagination-arrow" class="disabled">
+            const leftArrowHtml =  `
               <a href="#!">
                 <i class="material-icons">
                   chevron_left
                 </i>
               </a>
-            </li>
-            ${pagesHtml}
-            <li id="right-pagination-arrow" class="waves-effect">
+            `;
+            $('#left-pagination-arrow').append(leftArrowHtml);
+            const rightArrowHtml = `
               <a href="#!">
                 <i class="material-icons">
                   chevron_right
                 </i>
               </a>
-            </li>
             `;
-            $('#pagination-container').append(paginationHtml);
+            $('#right-pagination-arrow').append(rightArrowHtml);
+            const totalTracks = data.total;
+            const pages = Math.ceil(totalTracks / limit);
+            console.log('pages: ',pages);
+            for(let i=1; i <= pages; i++){
+              console.log(i);
+              const pagesHtml = `
+              <li id="page-${i}" class="waves-effect page">
+                <a class="tracks-page-button" id="tracks-page-button-${i}" href="#">
+                  ${i}
+                </a>
+              </li>
+              `;
+              $('#pagination-between').append(pagesHtml);
+              $(`#tracks-page-button-${i}`).on('click', event => {
+                console.log('clicked on tracks-page button ',i);
+                $.get('/host/spotify/mytracks', {limit: limit, offset:limit*(i-1)}, (data, status) => {
+                  console.log(data);
+                  renderSavedTracks(data);
+                });
+                if(i==1){
+                  $('#left-pagination-arrow').addClass('disabled');
+                  $('#right-pagination-arrow').removeClass('disabled');
+                  $('#right-pagination-arrow').addClass('waves-effect');
+                } else if (i == pages){
+                  $('#left-pagination-arrow').removeClass('disabled');
+                  $('#left-pagination-arrow').addClass('waves-effect');
+                  $('#right-pagination-arrow').addClass('disabled');
+                } else {
+                  $('#left-pagination-arrow').removeClass('disabled');
+                  $('#right-pagination-arrow').removeClass('disabled');
+                }
+                $('.page').removeClass('active');
+                $(`#page-${i}`).addClass('active');
+              });
+            };
           });
         };
 
@@ -447,8 +461,8 @@ block content
               };
               
               $.get('/host/spotify/play', payload, (playData, playStatus) => {
-                document.title = track.name;
               });
+              document.title = track.name;
             });
 
             $(`#track_${resultIdx}_add`).on('click', event=>{
@@ -483,17 +497,75 @@ block content
             $.get('/host/spotify/myplaylists', (playlistData, status) => {
               const playlists = playlistData.data.body.items;
               playlists.forEach((playlist, playlistIdx) => {
+
                 if(playlist.images.length > 0){
                   const playlistItemHtml = `
-                  <div class="card small playlist-items" id="playlist_${playlistIdx}">
-                    <div class="card-image playlist-image">
+                  <div class="card small playlist-items">
+                    <div class="card-image playlist-image" id="playlist_${playlistIdx}">
                       <img src="${playlist.images[0].url}">
                     </div>
                     <div class="card-content playlist-title">${playlist.name}</div>
+                    <div class="card-action add-to-queue" id="add-to-queue-${playlistIdx}">ADD PLAYLIST TO QUEUE</div>
                   </div>
                   `;
                   $('#playlist-items').append(playlistItemHtml);
+
                   $(`#playlist_${playlistIdx}`).on('click', function(event){
+                    $('#track-items').empty();
+                    $.get('/host/spotify/playlist-tracks', { playlist_id : playlist.id }, (playlistTracksData, status) => {
+                      const playlistTracks = playlistTracksData.tracks;
+                      playlistTracks.forEach((playlistTrack, trackIdx) => {
+
+                        const track = playlistTrack.track;
+                        const artists = track.artists.map(x=>x.name).join(', ');
+                        const name = track.name;
+                        const minutes = Math.floor(track.duration_ms / 60000);
+                        let seconds = Math.round((track.duration_ms / 1000) - 60*minutes);
+                        const imageUrl = track.album.images[2].url;// 64 x 64
+                        const uri = track.uri;
+                        const playlistTrackHtml = `
+                        <li class="collection-item avatar" id="playlist-track-${trackIdx}">
+                          <img src="${imageUrl}" class="circle">
+                          <span class="title">${name}</span>
+                          <p>${artists}</p>
+                          <p>Length: ${minutes}:${seconds >= 10 ? seconds : "0"+seconds}</p>
+                          <a class="secondary-content waves-effect waves-light btn" id="playlist-track-${trackIdx}-add">
+                            <i class="material-icons">add</i>
+                          </a>
+                        </li>
+                        `;
+                        $('#track-items').append(playlistTrackHtml);
+                        $(`#playlist-track-${trackIdx}`).on('dblclick', event=>{
+                          socketIO.emit('update-snackbar', {message:`Playing ${name}`});
+                          socketIO.emit('update-now-playing', {artists:artists, name:name, uri: uri});
+                          const payload = {
+                            uri: uri,
+                            device_id: deviceId,
+                            access_token: token
+                          };
+                          
+                          $.get('/host/spotify/play', payload, (playData, playStatus) => {
+                            document.title = name;
+                          });
+                        });
+
+                        $(`#playlist-track-${trackIdx}-add`).on('click', event=>{
+                          const payload = {
+                            artists: artists,
+                            name: name,
+                            minutes: minutes,
+                            seconds: seconds,
+                            uri: uri,
+                            imageUrl: track.album.images[1].url
+                          };
+                          pushQueue(payload, trackIdx);
+                          socketIO.emit('render-queue');
+                        });
+                      });
+                    });
+                  });
+                  
+                  $(`#add-to-queue-${playlistIdx}`).on('click', function(event){
                     $.get('/host/spotify/playlist-tracks', { playlist_id : playlist.id }, (playlistTracksData, status) => {
                       const playlistTracks = playlistTracksData.tracks;
                       playlistTracks.forEach((playlistTrack, trackIdx) => {
