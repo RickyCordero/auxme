@@ -372,6 +372,7 @@ block content
           $('#left-pagination-arrow').empty();
           $('#pagination-between').empty();
           $('#right-pagination-arrow').empty();
+          $('#pagination-container').show('slow');
           console.log('creating the pagination');
           $.get('/host/spotify/mytracks', {limit: limit, offset: offset}, (data, status)=>{
             const leftArrowHtml =  `
@@ -483,6 +484,7 @@ block content
 
         $('#my-tracks').on('click', event => {
           $('#playlist-container').hide('slow');
+          $('#track-items').empty();
           const limit = 20;
           const offset = 0;
           createPagination(limit,offset);
@@ -491,6 +493,8 @@ block content
         });
 
         $('#my-playlists').on('click', event => {
+          $('#track-items').empty();
+          $('#pagination-container').hide('slow');
           const speed = 500;
           if(!$('#playlist-container').is(':visible')){
             $('#playlist-items').empty();
@@ -512,6 +516,7 @@ block content
 
                   $(`#playlist_${playlistIdx}`).on('click', function(event){
                     $('#track-items').empty();
+                    $('#pagination-container').hide('slow');
                     $.get('/host/spotify/playlist-tracks', { playlist_id : playlist.id }, (playlistTracksData, status) => {
                       const playlistTracks = playlistTracksData.tracks;
                       playlistTracks.forEach((playlistTrack, trackIdx) => {
