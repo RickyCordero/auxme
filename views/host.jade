@@ -45,7 +45,8 @@ block content
     let room;
 
     // Tell Socket.io client to connect to the '/' namespace
-    const socketIO = io.connect('http://localhost:5000/');
+    //- const socketIO = io.connect('http://localhost:5000/');
+    const socketIO = io.connect(window.location.hostname);
 
     const updateSnackbar = message => {
       const snackbar = document.getElementById("snackbar");

@@ -24,7 +24,9 @@ block content
     let soundcloudToken;
 
     // Tell Socket.io client to connect to the '/spotfy' namespace
-    const socketIO = io.connect('http://localhost:5000/');
+    //- const socketIO = io.connect('https://localhost:5000/');
+    //- const socketIO = io.connect('https://evening-everglades-10425.herokuapp.com');
+    const socketIO = io.connect(window.location.hostname);
 
     const renderTrack = (track, idx) => {
       const artists = track.artists;
