@@ -7,7 +7,7 @@ const hash = require('object-hash');
 
 const client_id = process.env.SPOTIFY_CLIENT_ID; // Your client id
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET; // Your secret
-const redirect_uri = 'http://localhost:3000/host/spotify/callback/'; // Your redirect uri
+const redirect_uri = `http://${process.env.ADDRESS}:${process.env.PORT}/host/spotify/callback/`; // Your redirect uri
 
 const stateKey = 'spotify_auth_state';
 
@@ -18,7 +18,8 @@ const spotifyApi = new SpotifyWebApi();
 let global_access_token;
 let global_refresh_token;
 
-let queue = require('./shared').queue;
+// let queue = require('./shared').queue;
+let queue = [];
 
 let tokens = [];
 let all_users = [];

@@ -24,25 +24,54 @@ block content
     let soundcloudToken;
 
     // Tell Socket.io client to connect to the '/spotfy' namespace
-    const socketIO = io.connect('http://localhost:3000/');
+    const socketIO = io.connect('http://localhost:5000/');
+
+    const renderTrack = (track, idx) => {
+      const artists = track.artists;
+      const name = track.name;
+      const minutes = track.minutes;
+      let seconds = track.seconds;
+      const imageUrl = track.imageUrl;
+      const uri = track.uri;
+      const tile = `
+      <div class="card small" id="queue_track_${idx}">
+        <div class="card-image waves-effect waves-light" id="track_${idx}">
+          <img src="${imageUrl}">
+          <span class="card-title card-title-custom">${artists}</span>
+        </div>
+        <div class="card-content card-content-custom">
+          <span>${name}</span>
+        </div>
+        <div class="card-action">
+          <div class="remove" id="remove_${idx}">REMOVE FROM QUEUE</div>
+        </div>
+      </div>
+      `;
+      //- $(tile).hide().appendTo($('#queue-items')).show('normal');
+      $('#queue-items').append(tile);
+      //- setTimeout(()=>{
+      //-   $(`#queue_track_${idx}`).show('slow');
+      //- }, 1000);
+    };
 
     const renderQueue = () => {
       $('#queue-items').empty();
-      $.get('/guest/spotify/getqueue', (queueData, queueStatus)=>{
+      $.get('/guest/getqueue', (queueData, queueStatus)=>{
         let g = new Promise((resolve, reject)=>{
           async.forEachOf(queueData.queue, (queueItem, queueIdx)=>{
-            const tile = `
-            <div class="card small">
-              <div class="card-image waves-effect waves-light" id="track_${queueIdx}">
-                <img src="${queueItem.imageUrl}">
-                <span class="card-title card-title-custom">${queueItem.artists}</span>
-              </div>
-              <div class="card-content card-content-custom">
-                <p>${queueItem.name}</p>
-              </div>
-            </div>
-            `;
-            $('#queue-items').append(tile);
+            //- const tile = `
+            //- <div class="card small">
+            //-   <div class="card-image waves-effect waves-light" id="track_${queueIdx}">
+            //-     <img src="${queueItem.imageUrl}">
+            //-     <span class="card-title card-title-custom">${queueItem.artists}</span>
+            //-   </div>
+            //-   <div class="card-content card-content-custom">
+            //-     <p>${queueItem.name}</p>
+            //-   </div>
+            //- </div>
+            //- `;
+            //- $('#queue-items').append(tile);
+            renderTrack(queueItem, queueIdx);
           }, function(err){
             if(err){
               reject(err);
@@ -65,7 +94,7 @@ block content
     };
 
     const clearQueue = () => {
-      updateSnackbar(`Clearing queue`);
+      //- updateSnackbar(`Clearing queue`);
       $.get('/guest/clearqueue', (data, status)=>{
         //- socketIO.emit('render-queue');
         renderQueue();
@@ -120,24 +149,22 @@ block content
       });
     };
 
-    //- const updatePlayback = () => {
-    //-   setTimeout(()=>{
-    //-     $.get('/guest/spotify/playback-state', (data, status) => {
-    //-       console.log("here's the current playback state");
-    //-       console.log(data);
-    //-       if(Object.keys(data.data.body).length && data.data.body.is_playing){
-    //-         console.log('render pause button');
-    //-         $('#play_pause_image').text('pause');
-    //-         // render pause button
-    //-       } else {
-    //-         console.log('render play button');
-    //-         $('#play_pause_image').text('play_arrow');
-    //-         //- render play button
-    //-       }
-    //-     });
-    //-   }, 500); // WAIT HALF A SECOND TO GET STATE
-    //-   console.log('Play/paused!');
-    //- };
+    const updateNowPlaying = (data) => {
+      console.log('going to update the now playing info using socket.io');
+      console.log(data);
+      const playbackHtml = `
+      <h5 id="now-playing-song" class="white-text">
+        ${data.name}
+      </h5>
+      <p id="now-playing-artist" class="white-text">
+        ${data.artists}
+      </p>
+      `;
+      $('#playback-info').empty();
+      $('#playback-info').append(playbackHtml);
+
+      document.title = data.name;
+    };
 
     //- On guest join via client
     socketIO.on('connect', socket => {
@@ -146,6 +173,7 @@ block content
       const payload = {displayName: displayName, room: pin};
       updateSnackbar(`joining room ${pin} with name ${displayName}`);
       socketIO.emit('guest-join', payload);
+      socketIO.emit('get-host-spotify-access-token', payload);
       socketIO.emit('get-host-spotify-access-token', payload);
     });
 
@@ -187,6 +215,10 @@ block content
       $('#sidenav-left').append(spotifyHtml);
     });
 
+    //- socketIO.on('get-now-playing', data => {
+    //-   updateNowPlaying(data);
+    //- });
+
     //- Listen for render-queue signal from server
     socketIO.on('push-queue', data => {
       console.log('going to push a track to the queue using socket.io');
@@ -218,9 +250,8 @@ block content
     });
 
     //- Listen for clear-queue signal from server
-    socketIO.on('clear-queue', data => {
+    socketIO.on('clear-queue', () => {
       console.log('going to clear queue using socket.io');
-      console.log(data);
       clearQueue();
     });
 
@@ -233,22 +264,8 @@ block content
 
     //- Listen for update-now-playing signal from server
     socketIO.on('update-now-playing', data => {
-      console.log('going to update the now playing info using socket.io');
-      console.log(data);
-      const playbackHtml = `
-      <h5 id="now-playing-song" class="white-text">
-        ${data.name}
-      </h5>
-      <p id="now-playing-artist" class="white-text">
-        ${data.artists}
-      </p>
-      `;
-      $('#playback-info').empty();
-      $('#playback-info').append(playbackHtml);
-
-      document.title = data.name;
       //- Change the playback button state
-      //- updatePlayback();
+      updateNowPlaying(data);
     });
 
     socketIO.on('play', data => {

@@ -16,6 +16,8 @@ html(lang='en')
     script(src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js")
     //- Material icons
     link(href='https://fonts.googleapis.com/icon?family=Material+Icons', rel='stylesheet')
+    //- Custom font face
+    link(rel="stylesheet" href="/css/webfontkit/stylesheet.css" type="text/css" charset="utf-8")
 
     style.
       /* Scrollbar */
@@ -85,7 +87,7 @@ html(lang='en')
         width: 200px;
       }
       .input-field, button {
-        font-family: "Uni Sans";
+        font-family: "unisanslightregular";
       }
       #playback-info {
         text-align: center;
@@ -160,7 +162,7 @@ html(lang='en')
 
         background-color: #f6f6f6;
         /*font-family: 'Comfortaa', sans-serif;*/
-        font-family: "Uni Sans";
+        font-family: "unisanslightregular";
         color: #4a4a4a;
         /*
         display: flex;
@@ -217,17 +219,19 @@ html(lang='en')
         color: white;
       }
       .page-footer{
+        /*
         position: fixed;
         bottom: 0;
         width: 100%;
-        background-color: #4a4a4a;
         z-index: 1;
+        */
+        background-color: #4a4a4a;
       }
       .sidenav li>a {
         font-weight: normal;
       }
       input {
-        font-family: "Uni Sans Light";
+        font-family: "unisanslightregular";
       }
       .btn {
         background-color: #5f99dd;
@@ -253,9 +257,6 @@ html(lang='en')
       .nav-wrapper .input-field input[type=search] {
         width: 200%;
       }*/
-      .input-field{
-        
-      }
       .search{
         
       }
@@ -264,6 +265,15 @@ html(lang='en')
         text-align: left;
         padding-left: 5px;
       }
+      body {
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
+      }
+
+      main {
+        flex: 1 0 auto;
+      }
   body
     header
       nav.search
@@ -271,61 +281,61 @@ html(lang='en')
             a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
               i.material-icons.menu menu
             form
-              .input-field
+              .input-field(style="display: flex;")
                 input(id='search', placeholder='Search', type='search', required='')
                 label.label-icon(for='search')
                   i.material-icons.menu search
                 i.material-icons.closed(id="close-search") close
     main
-      ul(id="sidenav-left" class="sidenav sidenav-fixed")
-        a(href="/")
-          #auxme-logo auxme
-        //- .divider
-        if user
-          li(class=(title == 'Spotify' ? 'active' : ''))
-            a(id="host-link" href='#', class="waves-effect white-text") Host
-          li(class=(title == 'Party' ? 'active' : ''))
-            a(id="party-link" href='#', class="waves-effect white-text") Party
-          li(class=(title == 'Generate party code' ? 'active' : ''))
-            a(id="generate-party-code" href='#', class="waves-effect white-text") Generate party code
-          li(id="party-code")
-          li(class=(title == 'Logout' ? 'active' : ''))
-            a(id="logout-link" href='/users/logout', class="waves-effect white-text") Logout
-          
-        if !user
-          li(class=(title == 'Login' ? 'active' : ''))
-            a(id="login-link" href='/users/login', class="waves-effect white-text") Login
-          li(class=(title == 'Register' ? 'active' : ''))
-            a(id="register-link" href='/users/register', class="waves-effect white-text") Register
-          li(class=(title == 'Join' ? 'active' : ''))
-            a(id="join-link" href='/join', class="waves-effect white-text") Join Party
-        //- #connected-accounts
-      #host-view
+      .wrapper
+        ul(id="sidenav-left" class="sidenav sidenav-fixed")
+          a(href="/")
+            #auxme-logo auxme
+          //- .divider
+          if user
+            li(class=(title == 'Spotify' ? 'active' : ''))
+              a(id="host-link" href='#', class="waves-effect white-text") Host
+            li(class=(title == 'Party' ? 'active' : ''))
+              a(id="party-link" href='#', class="waves-effect white-text") Party
+            li(class=(title == 'Generate party code' ? 'active' : ''))
+              a(id="generate-party-code" href='#', class="waves-effect white-text") Generate party code
+            li(id="party-code")
+            li(class=(title == 'Logout' ? 'active' : ''))
+              a(id="logout-link" href='/users/logout', class="waves-effect white-text") Logout
+            
+          if !user
+            li(class=(title == 'Login' ? 'active' : ''))
+              a(id="login-link" href='/users/login', class="waves-effect white-text") Login
+            li(class=(title == 'Register' ? 'active' : ''))
+              a(id="register-link" href='/users/register', class="waves-effect white-text") Register
+            li(class=(title == 'Join' ? 'active' : ''))
+              a(id="join-link" href='/join', class="waves-effect white-text") Join Party
+          //- #connected-accounts
         .container
           #search-content(style="display: none;")
             #search_results.collection
-          #host-content
-            != messages()
-              block content
-      #party-view(style="display: none;")
-        .container
-            block party-content
-      #snackbar
-      //- #particles
-      //- script(src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js")
-      //- script.
-      //-   // Don't load particles on mobile
-      //-   if (screen && screen.width > 480) {
-      //-     //- const particlesCDN =  document.createElement('script');
-      //-     const particlesScript =  document.createElement('script');
-      //-     //- particlesCDN.src = 'http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js';
-      //-     particlesScript.src = '/javascripts/particles.js';
-      //-     //- document.head.appendChild(particlesCDN);
-      //-     document.head.appendChild(particlesScript);
-      //-     //- document.write('<script type="text/javascript" src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
-      //-   }
-    footer
-      .page-footer
+          #host-view
+            #host-content
+              != messages()
+                block content
+          #party-view(style="display: none;")
+            .container
+                block party-content
+        #snackbar
+        //- #particles
+        //- script(src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js")
+        //- script.
+        //-   // Don't load particles on mobile
+        //-   if (screen && screen.width > 480) {
+        //-     //- const particlesCDN =  document.createElement('script');
+        //-     const particlesScript =  document.createElement('script');
+        //-     //- particlesCDN.src = 'http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js';
+        //-     particlesScript.src = '/javascripts/particles.js';
+        //-     //- document.head.appendChild(particlesCDN);
+        //-     document.head.appendChild(particlesScript);
+        //-     //- document.write('<script type="text/javascript" src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
+        //-   }
+    footer.page-footer
         #playback-info
         #playback-buttons
           button(class="waves-effect btn-flat" id="previous")
@@ -334,3 +344,10 @@ html(lang='en')
             i(class="material-icons playback" id="play_pause_image") play_arrow 
           button(class="waves-effect btn-flat" id="next")
             i(class="material-icons playback") fast_forward
+    script.
+      //- Materialize sidenav
+      var options = {edge: 'left'};
+      document.addEventListener('DOMContentLoaded', function () {
+          var elems = document.querySelectorAll('.sidenav');
+          var instances = M.Sidenav.init(elems, options);
+      });

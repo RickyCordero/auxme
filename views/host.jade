@@ -5,18 +5,19 @@ block content
   #queue-container
     #queue-items
   button(class="waves-effect btn-flat" id="my-playlists") My playlists
-  button(class="waves-effect btn-flat" id="clearqueue") Clear queue
-  //- button(class="waves-effect btn-flat" id="obtain-new-token") Refresh token
   button(class="waves-effect btn-flat" id="my-tracks") My tracks
+  button(class="waves-effect btn-flat" id="clearqueue") Clear queue
   #playlist-container
     #playlist-items
+    #playlist-track-items.collection
   #search_results.collection
-  #pagination-container(style="display: none;")
-    ul(id="pagination-list", class="pagination", style="display: block; margin: 0 50px;")
-      li(id="left-pagination-arrow" class="disabled")
-      #pagination-between
-      li(id="right-pagination-arrow" class="waves-effect")
-  #track-items.collection
+  #track-container(style="display: none;")
+    #pagination-container(style="display: none;")
+      ul(id="pagination-list", class="pagination", style="display: block; margin: 0 50px;")
+        li(id="left-pagination-arrow" class="disabled")
+        #pagination-between
+        li(id="right-pagination-arrow" class="waves-effect")
+    #track-items.collection
   script(src="https://sdk.scdn.co/spotify-player.js")
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js")
   script.
@@ -43,8 +44,8 @@ block content
     let token;
     let room;
 
-    // Tell Socket.io client to connect to the '/spotify' namespace
-    const socketIO = io.connect('http://localhost:3000/');
+    // Tell Socket.io client to connect to the '/' namespace
+    const socketIO = io.connect('http://localhost:5000/');
 
     const updateSnackbar = message => {
       const snackbar = document.getElementById("snackbar");
@@ -69,7 +70,7 @@ block content
             //- render play button
             socketIO.emit('play');
           }
-        });              
+        });
       }, 500); // WAIT HALF A SECOND TO GET STATE
       console.log('Play/paused!');
     };
@@ -216,6 +217,27 @@ block content
       });
     };
 
+    const updateNowPlaying = (data) => {
+      console.log('going to update the now playing info using socket.io');
+      console.log(data);
+      const playbackHtml = `
+      <h5 id="now-playing-song" class="white-text">
+        ${data.name}
+      </h5>
+      <p id="now-playing-artist" class="white-text">
+        ${data.artists}
+      </p>
+      `;
+      $('#playback-info').empty();
+      $('#playback-info').append(playbackHtml);
+
+      $.get('/host/spotify/play', {uri: data.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
+        console.log(playData);
+        console.log(playStatus);
+      });
+      document.title = data.name;
+    };
+
     //- Listen for guest-join signal from server
     socketIO.on('guest-join', data => {
       console.log(data);
@@ -267,9 +289,8 @@ block content
     });
 
     //- Listen for clear-queue signal from server
-    socketIO.on('clear-queue', data => {
+    socketIO.on('clear-queue', () => {
       console.log('going to clear queue using socket.io');
-      console.log(data);
       clearQueue();
     });
 
@@ -282,28 +303,15 @@ block content
 
     //- Listen for update-now-playing signal from server
     socketIO.on('update-now-playing', data => {
-      console.log('going to update the now playing info using socket.io');
-      console.log(data);
-      const playbackHtml = `
-      <h5 id="now-playing-song" class="white-text">
-        ${data.name}
-      </h5>
-      <p id="now-playing-artist" class="white-text">
-        ${data.artists}
-      </p>
-      `;
-      $('#playback-info').empty();
-      $('#playback-info').append(playbackHtml);
-      //- $('#now-playing-song').text(data.name);
-      //- $('#now-playing-artist').text(data.artists);
-
-      $.get('/host/spotify/play', {uri: data.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
-        console.log(playData);
-        console.log(playStatus);
-      });
-      document.title = data.name;
+      //- Change the now-playing track info
+      updateNowPlaying(data);
       //- Change the playback button state
       updatePlayback();
+    });
+
+    //- Listen for get-now-playing signal from server
+    socketIO.on('get-now-playing', data => {
+      socketIO.emit('update-now-playing', {artists: track.artists, name: track.name, uri: track.uri});
     });
 
 
@@ -395,7 +403,6 @@ block content
             const pages = Math.ceil(totalTracks / limit);
             console.log('pages: ',pages);
             for(let i=1; i <= pages; i++){
-              console.log(i);
               const pagesHtml = `
               <li id="page-${i}" class="waves-effect page">
                 <a class="tracks-page-button" id="tracks-page-button-${i}" href="#">
@@ -487,14 +494,16 @@ block content
           $('#track-items').empty();
           const limit = 20;
           const offset = 0;
-          createPagination(limit,offset);
-          $('#track-items').show('slow');
-          $('#pagination-container').show('slow');
+          const speed = 500;
+          if(!$('#track-container').is(':visible')){
+            createPagination(limit,offset);
+          }
+          $('#track-container').slideToggle(speed);
         });
 
         $('#my-playlists').on('click', event => {
-          $('#track-items').empty();
-          $('#pagination-container').hide('slow');
+          $('#palylist-track-items').empty();
+          $('#track-container').hide('slow');
           const speed = 500;
           if(!$('#playlist-container').is(':visible')){
             $('#playlist-items').empty();
@@ -515,8 +524,8 @@ block content
                   $('#playlist-items').append(playlistItemHtml);
 
                   $(`#playlist_${playlistIdx}`).on('click', function(event){
-                    $('#track-items').empty();
-                    $('#pagination-container').hide('slow');
+                    $('#playlist-track-items').empty();
+                    $('#track-container').hide('slow');
                     $.get('/host/spotify/playlist-tracks', { playlist_id : playlist.id }, (playlistTracksData, status) => {
                       const playlistTracks = playlistTracksData.tracks;
                       playlistTracks.forEach((playlistTrack, trackIdx) => {
@@ -539,7 +548,7 @@ block content
                           </a>
                         </li>
                         `;
-                        $('#track-items').append(playlistTrackHtml);
+                        $('#playlist-track-items').append(playlistTrackHtml);
                         $(`#playlist-track-${trackIdx}`).on('dblclick', event=>{
                           socketIO.emit('update-snackbar', {message:`Playing ${name}`});
                           socketIO.emit('update-now-playing', {artists:artists, name:name, uri: uri});
@@ -771,9 +780,4 @@ block content
       });
     };
 block party-content
-  //- button(class="waves-effect btn-flat" id="show-players") Show players
   #player-items.collection
-  script.
-    //- $('#show-players').on('click', event=>{
-    //-   updatePlayers();
-    //- });

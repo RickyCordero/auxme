@@ -65,7 +65,7 @@ const roomToGame = (room) => {
 
 io.on('connection', function (socket) {
 
-  console.log('a connection has been made');
+  console.log('a socket has connected to the server');
   console.log(socket.id); // socketId is the default room the socket is in
   console.log(io.sockets.adapter.rooms);
   socket.on('host-join', data => {
@@ -162,6 +162,12 @@ io.on('connection', function (socket) {
     const room = socketIdToGame(socket.id).partyId;
     console.log('going to update the now playing info');
     io.in(room).emit('update-now-playing', data);
+  });
+  socket.on('get-now-playing', data => {
+    console.log(data);
+    const room = socketIdToGame(socket.id).partyId;
+    console.log('going to send the now playing info');
+    io.in(room).emit('get-now-playing', data);
   });
   socket.on('play', () => {
     const room = socketIdToGame(socket.id).partyId;
