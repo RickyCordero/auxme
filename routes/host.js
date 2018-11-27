@@ -7,7 +7,7 @@ const hash = require('object-hash');
 
 const client_id = process.env.SPOTIFY_CLIENT_ID; // Your client id
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET; // Your secret
-const redirect_uri = `https://${process.env.ADDRESS}/host/spotify/callback/`; // Your redirect uri
+const redirect_uri = `http://auxme.io/host/spotify/callback/`; // Your redirect uri
 
 const stateKey = 'spotify_auth_state';
 
