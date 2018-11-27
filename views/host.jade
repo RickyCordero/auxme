@@ -46,7 +46,12 @@ block content
 
     // Tell Socket.io client to connect to the '/' namespace
     //- const socketIO = io.connect('http://localhost:5000/');
-    const socketIO = io.connect(window.location.hostname);
+    let socketIO;
+    if(window.location.hostname == 'localhost'){
+      socketIO = io.connect(`${window.location.hostname}:5000/`);
+    } else {
+      socketIO = io.connect(window.location.hostname);
+    }
 
     const updateSnackbar = message => {
       const snackbar = document.getElementById("snackbar");

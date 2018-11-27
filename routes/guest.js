@@ -10,7 +10,14 @@ const spotifyApi = new SpotifyWebApi();
 
 const client_id = process.env.SPOTIFY_CLIENT_ID; // Your client id
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET; // Your secret
-const redirect_uri = `http://auxme.io/guest/spotify/callback/`; // Your redirect uri
+
+let redirect_uri;
+
+if (process.env.ENVIRONMENT == 'development') {
+    redirect_uri = `http://localhost:${process.env.PORT}/guest/spotify/callback/`;
+} else {
+    redirect_uri = `http://auxme.io/guest/spotify/callback/`; // Your redirect uri
+}
 
 const stateKey = 'spotify_auth_state';
 
@@ -286,7 +293,7 @@ module.exports = function (io, games) {
     router.get('/removetrack', function (req, res) {
         const track = req.query.track;
         queue = queue.filter(x => hash(x) !== hash(track));
-        res.send({queue:queue});
+        res.send({ queue: queue });
     });
 
     router.get('/spotify/access_token', function (req, res) {
