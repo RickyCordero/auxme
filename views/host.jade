@@ -355,23 +355,24 @@ block content
         });
         player.addListener('account_error', ({ message }) => { console.error(message); });
         player.addListener('playback_error', ({ message }) => {
-          console.error(message);
-          console.log('trying to start at beginning of queue');
-          $.get('/host/getqueue', (queueData, status)=>{
-            const track = queueData.queue[0];
-            socketIO.emit('update-snackbar', {message:`Playing ${track.name}`});
-            socketIO.emit('update-now-playing', {artists: track.artists, name: track.name, uri: track.uri});
-            const payload = {
-              uri: queueData.queue[0].uri,
-              device_id: deviceId,
-              access_token: token
-            };
+          console.log('yo, there was a playback issue');
+          console.log(message);
+          //- console.log('trying to start at beginning of queue');
+          //- $.get('/host/getqueue', (queueData, status)=>{
+          //-   const track = queueData.queue[0];
+          //-   socketIO.emit('update-snackbar', {message:`Playing ${track.name}`});
+          //-   socketIO.emit('update-now-playing', {artists: track.artists, name: track.name, uri: track.uri});
+          //-   const payload = {
+          //-     uri: queueData.queue[0].uri,
+          //-     device_id: deviceId,
+          //-     access_token: token
+          //-   };
             
-            $.get('/host/spotify/play', payload, (playData, playStatus) => {
-              document.title = track.name;
-            });
+          //-   $.get('/host/spotify/play', payload, (playData, playStatus) => {
+          //-     document.title = track.name;
+          //-   });
             
-          });
+          //- });
 
           //- TODO: Determine previous playback state through current music api
 
