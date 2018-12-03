@@ -20,13 +20,13 @@ const spotifyApi = new SpotifyWebApi();
 const client_id = process.env.SPOTIFY_CLIENT_ID; // Your client id
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET; // Your secret
 
-let redirect_uri;
+let redirect_uri = `https://auxme.io/host/spotify/callback/`; // Your redirect uri
 
-if (process.env.ENVIRONMENT == 'development') {
-    redirect_uri = `http://localhost:${process.env.PORT}/host/spotify/callback/`;
-} else {
-    redirect_uri = `https://auxme.io/host/spotify/callback/`; // Your redirect uri
-}
+// if (process.env.ENVIRONMENT == 'development') {
+//     redirect_uri = `http://localhost:${process.env.PORT}/host/spotify/callback/`;
+// } else {
+//     redirect_uri = `https://auxme.io/host/spotify/callback/`; // Your redirect uri
+// }
 
 const stateKey = 'spotify_auth_state';
 
