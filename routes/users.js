@@ -5,9 +5,16 @@ const upload = multer({ dest: './uploads' });
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 
-const User = require('../models/user');
+const mongoose = require("mongoose");
+const utils = require('../models/utils');
+
+require('../models/user');
+
 
 module.exports = function (io) {
+
+  const User = mongoose.model('User');
+
   /* GET users listing. */
   router.get('/', function (req, res, next) {
     res.send("This route doesn't do anything yet");
@@ -34,20 +41,23 @@ module.exports = function (io) {
   });
 
   passport.deserializeUser(function (id, done) {
-    User.getUserById(id, function (err, user) {
+    utils.getUserById(User, id, function (err, user) {
       done(err, user);
     });
+    // User.getUserById(id, function (err, user) {
+    //   done(err, user);
+    // });
   });
 
   passport.use(new LocalStrategy(function (username, password, done) {
 
-    User.getUserByUsername(username, function (err, user) {
+    utils.getUserByUsername(User, username, function (err, user) {
       if (err) throw err;
       if (!user) {
         return done(null, false, { message: 'Unknown User' });
       }
 
-      User.comparePassword(password, user.password, function (err, isMatch) {
+      utils.comparePassword(password, user.password, function (err, isMatch) {
         if (err) return done(err);
         if (isMatch) {
           return done(null, user);
@@ -56,6 +66,21 @@ module.exports = function (io) {
         }
       });
     });
+    // User.getUserByUsername(username, function (err, user) {
+    //   if (err) throw err;
+    //   if (!user) {
+    //     return done(null, false, { message: 'Unknown User' });
+    //   }
+
+    //   User.comparePassword(password, user.password, function (err, isMatch) {
+    //     if (err) return done(err);
+    //     if (isMatch) {
+    //       return done(null, user);
+    //     } else {
+    //       return done(null, false, { message: 'Invalid Password' });
+    //     }
+    //   });
+    // });
   }));
 
   router.post('/register', upload.single('profileimage'), function (req, res, next) {
@@ -97,10 +122,14 @@ module.exports = function (io) {
         profileimage: profileimage
       });
 
-      User.createUser(newUser, function (err, user) {
+      utils.createUser(newUser, function (err, user) {
         if (err) throw err;
         console.log(user);
       });
+      // User.createUser(newUser, function (err, user) {
+      //   if (err) throw err;
+      //   console.log(user);
+      // });
 
       req.flash('success', 'You are now registered and can login');
 

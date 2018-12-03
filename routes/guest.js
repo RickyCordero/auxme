@@ -1,9 +1,18 @@
 const express = require('express');
 const request = require('request');
 const router = express.Router();
-
 const queryString = require('querystring');
 const hash = require('object-hash');
+
+const mongoose = require("mongoose");
+const utils = require('../models/utils');
+
+require('../models/game');
+require('../models/playlist');
+require('../models/track');
+require('../models/player');
+require('../models/user');
+
 
 const SpotifyWebApi = require('spotify-web-api-node');
 const spotifyApi = new SpotifyWebApi();
@@ -16,15 +25,10 @@ let redirect_uri;
 if (process.env.ENVIRONMENT == 'development') {
     redirect_uri = `http://localhost:${process.env.PORT}/guest/spotify/callback/`;
 } else {
-    redirect_uri = `http://auxme.io/guest/spotify/callback/`; // Your redirect uri
+    redirect_uri = `https://www.auxme.io/guest/spotify/callback/`; // Your redirect uri
 }
 
 const stateKey = 'spotify_auth_state';
-
-const Game = require('../game');
-
-// let queue = require('./shared').queue;
-let queue = [];
 
 let hostSpotifyToken;
 let guestSpotifyAccessToken;
@@ -58,59 +62,13 @@ function ensureSpotifyAuthenticated(req, res, next) {
     res.redirect('/host/spotify-login');
 }
 
-module.exports = function (io, games) {
+module.exports = function (io) {
 
-    // console.log('io from guest.js');
-    // console.log(io);
-
-    // io.on('connection', function (socket) {
-    //     console.log('a guest has connected to the guest page');
-
-    //     socket.on('guest-join', data => {
-    //         console.log('got the guest-join');
-    //         console.log(data);
-    //     });
-    // });
-
-    // io.on('connection', function (socket) {
-    //     socket.on('host-join', data => {
-    //         room = data.partyCode;
-    //         console.log(`a host has connected`);
-    //         console.log(data);
-    //         console.log(room);
-    //         socket.join(room);
-    //         io.to(room).emit('ack', { message: `a host has joined a room with party code ${partyCode}` });
-    //     });
-    //     socket.on('guest-join', data => {
-    //         const room = data.room;
-    //         console.log(data);
-    //         console.log(room);
-    //         console.log(`going to join the room: ${room}`);
-    //         socket.join(room);
-    //         io.to(room).emit('guest-join', `${data.displayName} has joined the room`);
-    //     });
-    //     socket.on('got-token', data => {
-    //         console.log('got the access token');
-    //         console.log(data);
-    //         io.to(room).emit('ack', { token: data });
-    //     });
-    //     socket.on('render-queue', data => {
-    //         console.log('going to render the queue');
-    //         console.log(data);
-    //         io.to(room).emit('render-queue');
-    //     });
-    //     socket.on('update-snackbar', data => {
-    //         console.log('going to update the snackbar');
-    //         console.log(data);
-    //         io.to(room).emit('update-snackbar', data.message);
-    //     });
-    //     socket.on('update-now-playing', data => {
-    //         console.log('going to update the now playing info');
-    //         console.log(data);
-    //         io.to(room).emit('update-now-playing', data);
-    //     });
-
-    // });
+    // Mongoose models
+    const Game = mongoose.model("Game");
+    const Playlist = mongoose.model("Playlist");
+    const Track = mongoose.model("Track");
+    const Player = mongoose.model("Player");
 
     router.get('/', function (req, res, next) {
         res.render('guest');
@@ -119,7 +77,7 @@ module.exports = function (io, games) {
     router.get('/displayName/:displayName/pin/:pin', function (req, res, next) {
         const displayName = req.params.displayName;
         const pin = req.params.pin;
-        res.render('guest', { displayName: displayName, pin: pin });
+        res.render('guest', { displayName: displayName, pin: pin, env: process.env.ENVIRONMENT });
     });
 
     router.get('/search', function (req, res) {
@@ -179,15 +137,6 @@ module.exports = function (io, games) {
             'user-read-recently-played'
         ];
         const scope = permissions.join(' ');
-
-
-        console.log("here's the client_id: " + client_id);
-        console.log("here's the scope: " + scope);
-        console.log("here's the redirect_uri: " + redirect_uri);
-        console.log("here's the state: " + state);
-
-        console.log('calling redirect to spotify');
-
         res.redirect('https://accounts.spotify.com/authorize?' +
             queryString.stringify({
                 response_type: 'code',
@@ -204,13 +153,7 @@ module.exports = function (io, games) {
         const code = req.query.code || null;
         const state = req.query.state || null;
         const storedState = req.cookies ? req.cookies[stateKey] : null;
-        console.log('in the callback');
         if (state === null || state !== storedState) {
-            // res.redirect('/#' +
-            //     queryString.stringify({
-            //         error: 'state_mismatch'
-            //     })
-            // );
             res.redirect('/guest');
         } else {
             res.clearCookie(stateKey);
@@ -234,29 +177,6 @@ module.exports = function (io, games) {
                     guestSpotifyAccessToken = body.access_token;
                     guestSpotifyRefreshToken = body.refresh_token;
 
-                    // tokens.push(body.access_token);
-                    // const playerId = Math.random() * 9999;
-                    // console.log(playerId);
-                    // players.push(new Player(playerId, 'This is a name', {
-                    //     spotify: body.access_token
-                    // }));
-                    // const options = {
-                    //     url: 'https://api.spotify.com/v1/me',
-                    //     headers: { 'Authorization': 'Bearer ' + access_token },
-                    //     json: true
-                    // };
-
-                    // // use the access token to access the Spotify Web API
-                    // request.get(options, function (error, response, body) {
-                    //     // console.log(body);
-                    // });
-
-                    // we can also pass the token to the browser to make requests from there
-                    // res.redirect('/#' + 
-                    //     queryString.stringify({
-                    //         access_token: access_token,
-                    //         refresh_token: refresh_token
-                    //     }));
                     spotifyApi.setAccessToken(body.access_token);
                     spotifyApi.setRefreshToken(body.refresh_token);
                     res.render('guest', { access_token: body.access_token, refresh_token: body.refresh_token });
@@ -273,28 +193,80 @@ module.exports = function (io, games) {
 
     });
 
-    router.get('/getqueue', function (req, res, next) {
-        // const queue = Game.roomTo
-        res.send({
-            queue: queue
-        })
+    router.get('/getqueue', function (req, res) {
+        console.log(req.query.pin);
+        console.log(typeof (req.query.pin));
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+            } else {
+                // This fails
+                res.send({ queue: game.queue });
+            }
+        });
     });
 
-    router.get('/shiftqueue', function (req, res) {
-        queue.shift();
-        res.send({ queue: queue });
+    router.get('/pushqueue', function (req, res) {
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+            } else {
+                const track = new Track({
+                    artists: req.query.artists,
+                    name: req.query.name,
+                    minutes: req.query.minutes,
+                    seconds: req.query.seconds,
+                    uri: req.query.uri,
+                    imageUrl: req.query.imageUrl,
+                });
+                if (game.queue.includes(track)) {
+                    if (req.query.forcepush) {
+                        game.queue.push(track);
+                        game.save(function (err) {
+                            if (err) {
+                                console.log('yo, there was an error pushing queue items to the database');
+                                console.log(err);
+                            } else {
+                                console.log('updated the queue successfully in the database');
+                                res.send({ queue: game.queue });
+                            }
+                        });
+                    } else {
+                        res.send({ question: "Song already in queue, are you sure you want to add?" });
+                    }
+                } else {
+                    game.queue.push(track);
+                    game.save(function (err) {
+                        if (err) {
+                            console.log('yo, there was an error pushing queue items to the database');
+                            console.log(err);
+                        } else {
+                            console.log('updated the queue successfully in the database');
+                            res.send({ queue: game.queue });
+                        }
+                    });
+                }
+            }
+        });
     });
 
-    router.get('/clearqueue', function (req, res) {
-        queue.length = 0;
-        res.send({ queue: queue });
-    });
+    // router.get('/shiftqueue', function (req, res) {
+    //     queue.shift();
+    //     res.send({ queue: queue });
+    // });
 
-    router.get('/removetrack', function (req, res) {
-        const track = req.query.track;
-        queue = queue.filter(x => hash(x) !== hash(track));
-        res.send({ queue: queue });
-    });
+    // router.get('/clearqueue', function (req, res) {
+    //     queue.length = 0;
+    //     res.send({ queue: queue });
+    // });
+
+    // router.get('/removetrack', function (req, res) {
+    //     const track = req.query.track;
+    //     queue = queue.filter(x => hash(x) !== hash(track));
+    //     res.send({ queue: queue });
+    // });
 
     router.get('/spotify/access_token', function (req, res) {
         res.send({

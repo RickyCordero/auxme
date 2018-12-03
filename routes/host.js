@@ -5,34 +5,33 @@ const queryString = require('querystring');
 const _ = require('lodash');
 const hash = require('object-hash');
 
+const mongoose = require("mongoose");
+const utils = require('../models/utils');
+
+require('../models/game');
+require('../models/playlist');
+require('../models/track');
+require('../models/player');
+require('../models/user');
+
+const SpotifyWebApi = require('spotify-web-api-node');
+const spotifyApi = new SpotifyWebApi();
+
 const client_id = process.env.SPOTIFY_CLIENT_ID; // Your client id
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET; // Your secret
-// const redirect_uri = `http://auxme.io/host/spotify/callback/`; // Your redirect uri
 
 let redirect_uri;
 
 if (process.env.ENVIRONMENT == 'development') {
     redirect_uri = `http://localhost:${process.env.PORT}/host/spotify/callback/`;
 } else {
-    redirect_uri = `http://auxme.io/host/spotify/callback/`; // Your redirect uri
+    redirect_uri = `https://www.auxme.io/host/spotify/callback/`; // Your redirect uri
 }
 
 const stateKey = 'spotify_auth_state';
 
-const SpotifyWebApi = require('spotify-web-api-node');
-
-const spotifyApi = new SpotifyWebApi();
-
 let global_access_token;
 let global_refresh_token;
-
-// let queue = require('./shared').queue;
-let queue = [];
-
-let tokens = [];
-let all_users = [];
-const players = [];
-let room; // partyCode
 
 /**
  * Generates a random string containing numbers and letters
@@ -67,7 +66,16 @@ function ensureSpotifyAuthenticated(req, res, next) {
     res.redirect('/host/spotify-login');
 }
 
-module.exports = function (io, games) {
+module.exports = function (io) {
+
+    // Mongoose models
+    const Game = mongoose.model("Game");
+    const Playlist = mongoose.model("Playlist");
+    const Track = mongoose.model("Track");
+    const Player = mongoose.model("Player");
+
+    // console.log("here are the models from within host.js");
+    // console.log(models);
 
     /* GET home page. */
     router.get('/', ensureSpotifyAuthenticated, function (req, res, next) {
@@ -135,11 +143,6 @@ module.exports = function (io, games) {
         const storedState = req.cookies ? req.cookies[stateKey] : null;
 
         if (state === null || state !== storedState) {
-            // res.redirect('/#' +
-            //     queryString.stringify({
-            //         error: 'state_mismatch'
-            //     })
-            // );
             res.redirect('/host/spotify-login');
         } else {
             res.clearCookie(stateKey);
@@ -162,24 +165,6 @@ module.exports = function (io, games) {
                     // TODO: Figure out how to store these tokens per user per session
                     global_access_token = body.access_token;
                     global_refresh_token = body.refresh_token;
-
-                    // const options = {
-                    //     url: 'https://api.spotify.com/v1/me',
-                    //     headers: { 'Authorization': 'Bearer ' + access_token },
-                    //     json: true
-                    // };
-
-                    // // use the access token to access the Spotify Web API
-                    // request.get(options, function (error, response, body) {
-                    //     // console.log(body);
-                    // });
-
-                    // we can also pass the token to the browser to make requests from there
-                    // res.redirect('/#' + 
-                    //     queryString.stringify({
-                    //         access_token: access_token,
-                    //         refresh_token: refresh_token
-                    //     }));
                     spotifyApi.setAccessToken(body.access_token);
                     spotifyApi.setRefreshToken(body.refresh_token);
                     res.render('host', { access_token: body.access_token, refresh_token: body.refresh_token });
@@ -230,17 +215,6 @@ module.exports = function (io, games) {
                 res.send({ tracks: data.body.items, total: total });
             })
             .catch(err => console.error(err));
-    });
-
-    router.get('/all_tokens', function (req, res) {
-        res.send({ tokens: tokens });
-    });
-
-    router.get('/addplayer', function (req, res) {
-        const player = req.query.player;
-        console.log(player);
-        players.push(player);
-        res.send({ players: players });
     });
 
     router.get('/spotify/update_auth_token', function (req, res) {
@@ -305,37 +279,155 @@ module.exports = function (io, games) {
     });
 
     router.get('/pushqueue', function (req, res) {
-        if (queue.map(x => hash(x)).includes(hash(req.query))) {
-            if (req.query.forcepush) {
-                queue.push(req.query);
-                res.send({ queue: queue });
+        console.log('calling getGameByPin in pushqueue');
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
             } else {
-                res.send({ question: "Song already in queue, are you sure you want to add?" });
+                const trackConfig = {
+                    artists: req.query.artists,
+                    name: req.query.name,
+                    minutes: req.query.minutes,
+                    seconds: req.query.seconds,
+                    uri: req.query.uri,
+                    imageUrl: req.query.imageUrl,
+                };
+                const track = new Track(trackConfig);
+                // console.log(game);
+                // console.log(typeof (game));
+                // if (game.queue.includes(track)) {
+                console.log(game.queue);
+                console.log(typeof(game.queue));
+                // const s = new Set(game.queue.map(item=>typeof(item)));
+                // console.log(s);
+                console.log(track);
+                console.log(typeof(track));
+                const hashedQueue = game.queue.map(x => hash(_.omit(x, "_id")));
+                console.log("here's the hashedQueue:");
+                console.log(hashedQueue);
+                const trackHash = hash(trackConfig);
+                console.log("here's the track hash:");
+                console.log(trackHash);
+                if (hashedQueue.includes(trackHash)) {
+                    if (req.query.forcepush) {
+                        game.queue.push(track);
+                        game.save(function (err) {
+                            if (err) {
+                                console.log('yo, there was an error pushing queue items to the database');
+                                console.log(err);
+                            } else {
+                                console.log('updated the queue successfully in the database');
+                                res.send({ queue: game.queue });
+                            }
+                        });
+                    } else {
+                        res.send({ question: "Song already in queue, are you sure you want to add?" });
+                    }
+                } else {
+                    game.queue.push(track);
+                    game.save(function (err) {
+                        if (err) {
+                            console.log('yo, there was an error pushing queue items to the database');
+                            console.log(err);
+                        } else {
+                            console.log('updated the queue successfully in the database');
+                            res.send({ queue: game.queue });
+                        }
+                    });
+                }
             }
-        } else {
-            queue.push(req.query);
-            res.send({ queue: queue });
-        }
+        });
     });
 
     router.get('/removetrack', ensureAuxMeAuthenticated, function (req, res) {
-        const track = req.query.track;
-        queue = queue.filter(x => hash(x) !== hash(track));
-        res.send({ queue: queue });
+        console.log('calling getGameByPin in removetrack');
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+            } else {
+                const track = req.query.track;
+                console.log("here is the track to be removed:");
+                console.log(track);
+                console.log(typeof(track));
+                game.queue = game.queue.filter(x => hash(_.omit(x, "_id")) !== hash(_.omit(track, "_id")));
+                game.save(function (err) {
+                    if (err) {
+                        console.log('yo, there was an error pushing queue items to the database');
+                        console.log(err);
+                    } else {
+                        console.log('updated the queue successfully in the database');
+                        res.send({ queue: game.queue });
+                    }
+                });
+            }
+        });
     });
 
-    router.get('/getqueue', ensureAuxMeAuthenticated, function (req, res) {
-        res.send({ queue: queue });
+    router.get('/getqueue', function (req, res) {
+        // console.log('This is the game model:');
+        // console.log(Game);
+        // console.log(typeof(Game));
+        console.log('this is the query pin');
+        console.log(req.query.pin);
+        // console.log('this is the typeof the query pin');
+        // console.log(typeof (req.query.pin));
+        console.log('calling getGameByPin in getqueue');
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+            } else {
+                console.log("This is the game object:");
+                console.log(game);
+                console.log(typeof(game));
+                res.send({ queue: game.queue });
+            }
+        });
     });
 
     router.get('/shiftqueue', ensureAuxMeAuthenticated, function (req, res) {
-        queue.shift();
-        res.send({ queue: queue });
+        console.log('calling getGameByPin in shiftqueue');
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+            } else {
+                game.queue.shift();
+                game.save(function (err) {
+                    if (err) {
+                        console.log('yo, there was an error pushing queue items to the database');
+                        console.log(err);
+                    } else {
+                        console.log('shifted the queue successfully in the database');
+                        res.send({ queue: game.queue });
+                    }
+                });
+            }
+        });
     });
 
     router.get('/clearqueue', ensureAuxMeAuthenticated, function (req, res) {
-        queue.length = 0;
-        res.send({ queue: queue });
+        console.log('calling getGameByPin in clearqueue');
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+            } else {
+                // game.queue.length = 0;
+                game.queue = [];
+                game.save(function (err) {
+                    if (err) {
+                        console.log('yo, there was an error clearing the queue in the database');
+                        console.log(err);
+                    } else {
+                        console.log('cleared the queue successfully in the database');
+                        res.send({ queue: game.queue });
+                    }
+                });
+            }
+        });
     });
 
     router.get('/spotify/myplaylists', ensureAuxMeAuthenticated, function (req, res) {
@@ -360,7 +452,7 @@ module.exports = function (io, games) {
                 res.send({ tracks: data.body.items });
             })
             .catch(error => {
-                console.log('yo there was an error in /playlist-tracks');
+                console.log('yo, there was an error in /playlist-tracks');
                 console.log(error);
                 res.send({ error: error });
             });
@@ -375,13 +467,23 @@ module.exports = function (io, games) {
             .catch(error => {
                 console.log('yo, there was an error in /playback-state');
                 console.log(error);
-                res.redirect('/update_auth_token');
+                res.redirect('/spotify/update_auth_token');
                 // res.send({error: error});
             });
     });
 
     router.get('/getplayers', ensureAuxMeAuthenticated, function (req, res) {
-        res.send({ players: players });
+        console.log('calling getGameByPin in getplayers');
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+            } else {
+                console.log('here is the game:');
+                console.log(game);
+                res.send({ players: game.players });
+            }
+        });
     });
 
     router.get('/profile', ensureAuxMeAuthenticated, function (req, res) {
@@ -389,9 +491,8 @@ module.exports = function (io, games) {
     });
 
     router.get('/generate-party-code', ensureAuxMeAuthenticated, function (req, res) {
-        // partyCode = 1234;
-        partyCode = Math.floor(Math.random() * 90000) + 10000; // new pin for game
-        res.send({ partyCode: partyCode });
+        const pin = Math.floor(Math.random() * 90000) + 10000; // new pin for game
+        res.send({ pin: pin });
     });
 
     return router;

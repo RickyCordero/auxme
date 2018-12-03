@@ -42,10 +42,9 @@ block content
 
     let deviceId;
     let token;
-    let room;
+    let pin;
 
     // Tell Socket.io client to connect to the '/' namespace
-    //- const socketIO = io.connect('http://localhost:5000/');
     let socketIO;
     if(window.location.hostname == 'localhost'){
       socketIO = io.connect(`${window.location.hostname}:5000/`);
@@ -69,12 +68,12 @@ block content
             console.log('render pause button');
             $('#play_pause_image').text('pause');
             // render pause button
-            socketIO.emit('pause');
+            socketIO.emit('pause', {pin: pin});
           } else {
             console.log('render play button');
             $('#play_pause_image').text('play_arrow');
             //- render play button
-            socketIO.emit('play');
+            socketIO.emit('play', {pin: pin});
           }
         });
       }, 500); // WAIT HALF A SECOND TO GET STATE
@@ -82,11 +81,11 @@ block content
     };
 
     const removeTrackFromQueue = (track) => {
-      $.get('/host/removetrack', {track:track}, (data, status)=>{
+      $.get('/host/removetrack', {track:track, pin: pin}, (data, status)=>{
         console.log(data);
         console.log(status);
       });
-      socketIO.emit('remove-track-from-queue', {track:track});
+      socketIO.emit('remove-track-from-queue', {track:track, pin: pin});
     };
 
     const renderTrack = (track, idx) => {
@@ -119,7 +118,8 @@ block content
 
     const renderQueue = () => {
       $('#queue-items').empty();
-      $.get('/host/getqueue', (queueData, queueStatus)=>{
+      $.get('/host/getqueue', {pin: pin}, (queueData, queueStatus)=>{
+        //- console.log(queueData);
         let g = new Promise((resolve, reject)=>{
           //- async.eachOfSeries(queueData.queue, (queueItem, queueIdx)=>{
           async.forEachOf(queueData.queue, (queueItem, queueIdx)=>{
@@ -147,8 +147,8 @@ block content
             //- };
             //- show(queueIdx);
             $(`#track_${queueIdx}`).on('click', event=>{
-              socketIO.emit('update-snackbar', {message:`Playing ${queueItem.name}`});
-              socketIO.emit('update-now-playing', {artists:queueItem.artists, name:queueItem.name, uri: queueItem.uri});
+              socketIO.emit('update-snackbar', {message:`Playing ${queueItem.name}`, pin: pin});
+              socketIO.emit('update-now-playing', {artists:queueItem.artists, name:queueItem.name, uri: queueItem.uri, pin: pin});
             });
             $(`#remove_${queueIdx}`).on('click', event=>{
               console.log(queueItem);
@@ -174,26 +174,25 @@ block content
 
     const generatePartyCode = () => {
       $.get('/host/generate-party-code', (data, status)=>{
-        const partyCode = data.partyCode;
-        console.log('Generated party code: '+partyCode);
-        updateSnackbar('Generated party code: '+partyCode);
+        pin = data.pin;
+        console.log('Generated party code: '+pin);
+        updateSnackbar('Generated party code: '+pin);
         const partyHtml = `
         <a id="party-code" href='#' class="waves-effect white-text">
-          Party code: ${partyCode}
+          Party code: ${pin}
         </a>
         `;
         $('#party-code').empty();
         $('#party-code').append(partyHtml);
-        room = partyCode;
-        socketIO.emit('host-join', {hostName: 'Ricky', partyName: "Ricky's party", partyCode:partyCode});
+        socketIO.emit('host-join', {hostName: 'Ricky', partyName: "Ricky's party", pin: pin});
       });
     };
 
     const clearQueue = () => {
-      socketIO.emit('update-snackbar', {message:`Clearing queue`});
-      $.get('/host/clearqueue', (data, status)=>{
+      socketIO.emit('update-snackbar', {message:`Clearing queue`, pin: pin});
+      $.get('/host/clearqueue', {pin: pin}, (data, status)=>{
         //- renderQueue();
-        socketIO.emit('render-queue');
+        socketIO.emit('render-queue', {pin: pin});
       });
     };
 
@@ -209,13 +208,13 @@ block content
     });
 
     const updatePlayers = () => {
-      $.get('/host/getplayers', (data, status)=>{
+      $.get('/host/getplayers', {pin: pin}, (data, status)=>{
         $('#player-items').empty();
         console.log(data);
         data.players.forEach((player, playerIdx)=>{
           const playerHtml = `
           <li class="collection-item avatar" id="player_${playerIdx}">
-            <span class="title">${player.displayName}</span>
+            <span class="title">${player.username}</span>
           </li>
           `;
           $('#player-items').append(playerHtml);
@@ -250,10 +249,10 @@ block content
       const message = `guest "${data.displayName}" has joined the room`;
       updateSnackbar(message);
       //- socketIO.emit('host-spotify-access-token', {token: token});
-      $.get('/host/addplayer', {displayName:data.displayName, room: data.room, socketId: data.socketId}, (data, status) => {
-        console.log(data);
-        console.log(status);
-      });
+      //- $.get('/host/addplayer', {displayName:data.displayName, room: data.room, socketId: data.socketId}, (data, status) => {
+      //-   console.log(data);
+      //-   console.log(status);
+      //- });
       updatePlayers();
     });
 
@@ -261,20 +260,21 @@ block content
     socketIO.on('guest-leave', data => {
       console.log(data);
       const displayName = data.displayName;
-      const room = data.room;
       updateSnackbar(`guest ${displayName} has left the room`);
     });
 
     //- Listen for guest-join signal from server
     socketIO.on('get-host-spotify-access-token', data => {
       console.log('handling get-host-spotify-access-token event with data:');
+      console.log('this is data.room:');
       console.log(data.room);
-      console.log(room);
       console.log(typeof(data.room));
-      console.log(typeof(room));
-      if(parseInt(data.room) == room){
+      console.log('this is the pin:');
+      console.log(pin);
+      console.log(typeof(pin));
+      if(data.room == pin){
         console.log('sending token');
-        socketIO.emit('host-spotify-access-token', {token: token});
+        socketIO.emit('host-spotify-access-token', {token: token, pin: pin});
       } else {
         console.log("a request was made for this host's spotify access token");
       }
@@ -317,7 +317,7 @@ block content
 
     //- Listen for get-now-playing signal from server
     socketIO.on('get-now-playing', data => {
-      socketIO.emit('update-now-playing', {artists: track.artists, name: track.name, uri: track.uri});
+      socketIO.emit('update-now-playing', {artists: track.artists, name: track.name, uri: track.uri, pin: pin});
     });
 
 
@@ -467,8 +467,8 @@ block content
             $('#track-items').append(trackCardHtml);
 
             $(`#track_${resultIdx}`).on('dblclick', event=>{
-              socketIO.emit('update-snackbar', {message:`Playing ${name}`});
-              socketIO.emit('update-now-playing', {artists:artists, name:name, uri: uri});
+              socketIO.emit('update-snackbar', {message:`Playing ${name}`, pin: pin});
+              socketIO.emit('update-now-playing', {artists:artists, name:name, uri: uri, pin: pin});
               const payload = {
                 uri: uri,
                 device_id: deviceId,
@@ -487,11 +487,12 @@ block content
                 minutes: minutes,
                 seconds: seconds,
                 uri: uri,
-                imageUrl: track.album.images[1].url
+                imageUrl: track.album.images[1].url,
+                pin: pin
               };
               pushQueue(payload, resultIdx);
               //- renderQueue();
-              socketIO.emit('render-queue');
+              socketIO.emit('render-queue', {pin: pin});
             });
           });
         };
@@ -557,8 +558,8 @@ block content
                         `;
                         $('#playlist-track-items').append(playlistTrackHtml);
                         $(`#playlist-track-${trackIdx}`).on('dblclick', event=>{
-                          socketIO.emit('update-snackbar', {message:`Playing ${name}`});
-                          socketIO.emit('update-now-playing', {artists:artists, name:name, uri: uri});
+                          socketIO.emit('update-snackbar', {message:`Playing ${name}`, pin: pin});
+                          socketIO.emit('update-now-playing', {artists:artists, name:name, uri: uri, pin: pin});
                           const payload = {
                             uri: uri,
                             device_id: deviceId,
@@ -577,10 +578,11 @@ block content
                             minutes: minutes,
                             seconds: seconds,
                             uri: uri,
-                            imageUrl: track.album.images[1].url
+                            imageUrl: track.album.images[1].url,
+                            pin: pin
                           };
                           pushQueue(payload, trackIdx);
-                          socketIO.emit('render-queue');
+                          socketIO.emit('render-queue', {pin: pin});
                         });
                       });
                     });
@@ -600,11 +602,12 @@ block content
                           minutes: minutes,
                           seconds: seconds,
                           uri: track.uri,
-                          imageUrl: track.album.images[1].url
+                          imageUrl: track.album.images[1].url,
+                          pin: pin
                         };
                         pushQueue(payload, trackIdx);
                       });
-                      socketIO.emit('render-queue');
+                      socketIO.emit('render-queue', {pin: pin});
                     });
                   });
                 } else {
@@ -621,28 +624,28 @@ block content
         //- socket.emit('render-queue');
 
         $('#clearqueue').on('click', event=>{
-          socketIO.emit('clear-queue');
+          socketIO.emit('clear-queue', {pin: pin});
         });
 
         const shiftQueue = () => {
-          $.get('/host/shiftqueue', (queueData, queueStatus) => {
+          $.get('/host/shiftqueue', {pin: pin}, (queueData, queueStatus) => {
             if (queueData){
               const queueItem = queueData.queue[0];
               if (queueItem){
                 $.get('/host/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
-                  socketIO.emit('update-snackbar', {message:`Now playing ${queueItem.name}`});
-                  socketIO.emit('update-now-playing', {artists: queueItem.artists, name:queueItem.name, uri:queueItem.uri});
+                  socketIO.emit('update-snackbar', {message:`Now playing ${queueItem.name}`, pin: pin});
+                  socketIO.emit('update-now-playing', {artists: queueItem.artists, name:queueItem.name, uri:queueItem.uri, pin: pin});
                   document.title = queueItem.name;
                 });
               } else {
-                socketIO.emit('update-snackbar', {message:`The queue is empty`});
-                socketIO.emit('update-now-playing', {artists: '', name:'', uri:''});
+                socketIO.emit('update-snackbar', {message:`The queue is empty`, pin: pin});
+                socketIO.emit('update-now-playing', {artists: '', name:'', uri:'', pin: pin});
                 document.title = "AuxMe";
               }
             } else {
               console.log('yo, there was some shiftqueue error');
             }
-            socketIO.emit('render-queue');
+            socketIO.emit('render-queue', {pin: pin});
           });
         };
         const pushQueue = (payload, idx) => {
@@ -651,15 +654,14 @@ block content
               if(confirm(data.question)){
                 payload.forcepush = true;
                 pushQueue(payload, idx);
-                socketIO.emit('render-queue');
+                socketIO.emit('render-queue', {pin: pin});
               } else {
                 //- user pressed cancel, queue not updated
               }
             } else { // updated queue successfully
-              socketIO.emit('update-snackbar', {message:`Added ${payload.name} to the queue`});
+              socketIO.emit('update-snackbar', {message:`Added ${payload.name} to the queue`, pin: pin});
               console.log(data);
               console.log(status);
-              //- TODO: Implement socket io event to emit signal to render all sockets' queue
             }
           });
         };
@@ -719,8 +721,8 @@ block content
                   $('#search_results').append(resultCardHtml);
 
                   $(`#result_${resultIdx}`).on('dblclick', event=>{
-                    socketIO.emit('update-snackbar', {message:`Playing ${name}`});
-                    socketIO.emit('update-now-playing', {artists:artists, name:name, uri: uri});
+                    socketIO.emit('update-snackbar', {message:`Playing ${name}`, pin: pin});
+                    socketIO.emit('update-now-playing', {artists:artists, name:name, uri: uri, pin: pin});
                     const payload = {
                       uri: uri,
                       device_id: deviceId,
@@ -739,11 +741,12 @@ block content
                       minutes: minutes,
                       seconds: seconds,
                       uri: uri,
-                      imageUrl: result.album.images[1].url
+                      imageUrl: result.album.images[1].url,
+                      pin: pin
                     };
                     pushQueue(payload, resultIdx);
                     //- renderQueue();
-                    socketIO.emit('render-queue');
+                    socketIO.emit('render-queue', {pin: pin});
                   });
                 });
               },5);
@@ -758,7 +761,7 @@ block content
         // Not Ready
         player.addListener('not_ready', ({ device_id }) => {
           //- console.log('Device ID has gone offline', device_id);
-          socketIO.emit('update-snackbar', {message:`Device ID ${device_id} has gone offline`});
+          socketIO.emit('update-snackbar', {message:`Device ID ${device_id} has gone offline`, pin: pin});
         });
 
         // Connect to the player!

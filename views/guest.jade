@@ -22,11 +22,20 @@ block content
     let appleToken;
     let tidalToken;
     let soundcloudToken;
+    const displayName = "#{displayName}";
+    let pin = "#{pin}";
 
     // Tell Socket.io client to connect to the '/spotfy' namespace
     //- const socketIO = io.connect('https://localhost:5000/');
     //- const socketIO = io.connect('https://evening-everglades-10425.herokuapp.com');
-    const socketIO = io.connect(window.location.hostname);
+    console.log(window.location.hostname);
+    //- const socketIO = io.connect(window.location.hostname);
+    let socketIO;
+    if ("#{env}" == "development"){
+      socketIO = io.connect(window.location.hostname+":5000");
+    } else {
+      socketIO = io.connect(window.location.hostname);
+    }
 
     const renderTrack = (track, idx) => {
       const artists = track.artists;
@@ -44,9 +53,6 @@ block content
         <div class="card-content card-content-custom">
           <span>${name}</span>
         </div>
-        <div class="card-action">
-          <div class="remove" id="remove_${idx}">REMOVE FROM QUEUE</div>
-        </div>
       </div>
       `;
       //- $(tile).hide().appendTo($('#queue-items')).show('normal');
@@ -58,7 +64,9 @@ block content
 
     const renderQueue = () => {
       $('#queue-items').empty();
-      $.get('/guest/getqueue', (queueData, queueStatus)=>{
+      console.log('this is the pin before rendering the queue');
+      console.log(pin);
+      $.get('/host/getqueue', {pin: pin}, (queueData, queueStatus)=>{
         let g = new Promise((resolve, reject)=>{
           async.forEachOf(queueData.queue, (queueItem, queueIdx)=>{
             //- const tile = `
@@ -97,32 +105,33 @@ block content
 
     const clearQueue = () => {
       //- updateSnackbar(`Clearing queue`);
-      $.get('/guest/clearqueue', (data, status)=>{
-        //- socketIO.emit('render-queue');
-        renderQueue();
-      });
+      //- $.get('/guest/clearqueue', (data, status)=>{
+      //-   //- socketIO.emit('render-queue');
+      //-   renderQueue();
+      //- });
+      renderQueue();
     };
 
-    const shiftQueue = () => {
-      $.get('/guest/spotify/shiftqueue', (queueData, queueStatus) => {
-        if (queueData){
-          const queueItem = queueData.queue[0];
-          if (queueItem){
-            $.get('/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
-              updateSnackbar(`Now playing ${queueItem.name}`);
-              document.title = queueItem.name;
-            });
-          } else {
-            updateSnackbar(`The queue is empty`);
-            document.title = "AuxMe";
-          }
-        } else {
-          console.log('yo, there was some shiftqueue error');
-        }
-        //- renderQueue();
-        socketIO.emit('render-queue');
-      });
-    };
+    //- const shiftQueue = () => {
+    //-   $.get('/guest/spotify/shiftqueue', (queueData, queueStatus) => {
+    //-     if (queueData){
+    //-       const queueItem = queueData.queue[0];
+    //-       if (queueItem){
+    //-         $.get('/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
+    //-           updateSnackbar(`Now playing ${queueItem.name}`);
+    //-           document.title = queueItem.name;
+    //-         });
+    //-       } else {
+    //-         updateSnackbar(`The queue is empty`);
+    //-         document.title = "AuxMe";
+    //-       }
+    //-     } else {
+    //-       console.log('yo, there was some shiftqueue error');
+    //-     }
+    //-     //- renderQueue();
+    //-     socketIO.emit('render-queue');
+    //-   });
+    //- };
 
     //- const pushQueue = (payload) => {
     //-   $.get('/host/pushqueue', payload, (data, status) => {
@@ -138,12 +147,13 @@ block content
           if(confirm(data.question)){
             payload.forcepush = true;
             pushQueue(payload, idx);
-            socketIO.emit('render-queue');
+            //- socketIO.emit('render-queue');
+            renderQueue();
           } else {
             //- user pressed cancel, queue not updated
           }
         } else { // updated queue successfully
-          socketIO.emit('update-snackbar', {message:`Added ${payload.name} to the queue`});
+          socketIO.emit('update-snackbar', {message:`Added ${payload.name} to the queue`, pin: pin});
           console.log(data);
           console.log(status);
           //- TODO: Implement socket io event to emit signal to render all sockets' queue
@@ -170,13 +180,13 @@ block content
 
     //- On guest join via client
     socketIO.on('connect', socket => {
-      const displayName = '#{displayName}';
-      const pin = '#{pin}';
-      const payload = {displayName: displayName, room: pin};
+      console.log('socket connect, here is the pin:');
+      console.log(pin);
+      const payload = {displayName: displayName, pin: pin};
       updateSnackbar(`joining room ${pin} with name ${displayName}`);
       socketIO.emit('guest-join', payload);
       socketIO.emit('get-host-spotify-access-token', payload);
-      socketIO.emit('get-host-spotify-access-token', payload);
+      //- socketIO.emit('get-host-spotify-access-token', payload);
     });
 
     //- On guest join via client
@@ -202,7 +212,7 @@ block content
     });
 
     socketIO.on('no-game-found', data => {
-      updateSnackbar(`No game was found with party code: ${data.partyCode}`);
+      updateSnackbar(`No game was found with party code: ${data.pin}`);
     });
 
     //- Listen for guest-join signal from server
@@ -235,19 +245,19 @@ block content
       renderQueue();
     });
 
-    const removeTrackFromQueue = (track) => {
-      $.get('/guest/removetrack', {track:track}, (data, status)=>{
-        console.log(data);
-        console.log(status);
-      });
-    };
+    //- const removeTrackFromQueue = (track) => {
+    //-   $.get('/guest/removetrack', {track:track}, (data, status)=>{
+    //-     console.log(data);
+    //-     console.log(status);
+    //-   });
+    //- };
 
-    //- Listen for render-queue signal from server
+    //- Listen for remove-track-from-queue signal from server
     socketIO.on('remove-track-from-queue', data => {
       console.log('going to remove a track from the queue using socket.io');
       console.log(data);
       //- a guest shares the same reference to the queue, thus only needs to render the queue
-      removeTrackFromQueue(data.track);
+      //- removeTrackFromQueue(data.track);
       renderQueue();
     });
 
@@ -279,6 +289,8 @@ block content
     });
 
     renderQueue();
+    // undo this if it didn't work
+
     // authenticate the client Spotify web api
     // get token via back end using authorization code flow
     //- $('#spotify-login').on('click', event => {
@@ -367,10 +379,12 @@ block content
                     minutes: minutes,
                     seconds: seconds,
                     uri: result.uri,
-                    imageUrl: result.album.images[1].url
+                    imageUrl: result.album.images[1].url,
+                    pin: pin
                   };
                   pushQueue(payload);
-                  socketIO.emit('render-queue');
+                  //- socketIO.emit('render-queue');
+                  renderQueue();
                 });
               });
             },5);
