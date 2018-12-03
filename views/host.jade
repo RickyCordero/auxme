@@ -267,12 +267,12 @@ block content
     socketIO.on('get-host-spotify-access-token', data => {
       console.log('handling get-host-spotify-access-token event with data:');
       console.log('this is data.room:');
-      console.log(data.room);
-      console.log(typeof(data.room));
+      console.log(data.pin);
+      console.log(typeof(data.pin));
       console.log('this is the pin:');
       console.log(pin);
       console.log(typeof(pin));
-      if(data.room == pin){
+      if(data.pin == pin){
         console.log('sending token');
         socketIO.emit('host-spotify-access-token', {token: token, pin: pin});
       } else {

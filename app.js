@@ -234,7 +234,8 @@ io.on('connection', function (socket) {
   socket.on('get-host-spotify-access-token', data => {
     console.log("a request has been made for the host's spotify token");
     console.log(data);
-    socket.broadcast.emit('get-host-spotify-access-token', data);
+    const room = data.pin;
+    socket.broadcast.to(room).emit('get-host-spotify-access-token', data);
   });
   socket.on('host-spotify-access-token', data => {
     console.log(data);
