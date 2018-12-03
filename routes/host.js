@@ -25,7 +25,7 @@ let redirect_uri;
 if (process.env.ENVIRONMENT == 'development') {
     redirect_uri = `http://localhost:${process.env.PORT}/host/spotify/callback/`;
 } else {
-    redirect_uri = `https://www.auxme.io/host/spotify/callback/`; // Your redirect uri
+    redirect_uri = `https://auxme.io/host/spotify/callback/`; // Your redirect uri
 }
 
 const stateKey = 'spotify_auth_state';
