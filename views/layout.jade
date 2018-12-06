@@ -2,6 +2,7 @@ doctype html
 html(lang='en')
   head
     title auxme
+    meta(content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport")
     script(src='https://code.jquery.com/jquery-3.3.1.min.js')
     script(src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js")
     //- Bootstrap
@@ -303,8 +304,6 @@ html(lang='en')
               a(id="host-link" href='#', class="waves-effect white-text") Host
             li(class=(title == 'Party' ? 'active' : ''))
               a(id="party-link" href='#', class="waves-effect white-text") Party
-            li(class=(title == 'Generate party code' ? 'active' : ''))
-              a(id="generate-party-code" href='#', class="waves-effect white-text") Generate party code
             li(id="party-code")
             li(class=(title == 'Logout' ? 'active' : ''))
               a(id="logout-link" href='/users/logout', class="waves-effect white-text") Logout
