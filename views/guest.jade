@@ -282,13 +282,13 @@ block content
     //- Listen for guest-join signal from server
     socketIO.on('host-spotify-access-token', data => {
       hostToken = data.token;
-      const spotifyHtml = `
-      <li>
-          <a class="white-text">Spotify Connected</a>
-      </li>
-      `;
-      //- $('#connected-accounts').append(spotifyHtml);
-      $('#sidenav-left').append(spotifyHtml);
+      //- const spotifyHtml = `
+      //- <li>
+      //-     <a class="white-text">Spotify Connected</a>
+      //- </li>
+      //- `;
+      //- //- $('#connected-accounts').append(spotifyHtml);
+      //- $('#sidenav-left').append(spotifyHtml);
     });
 
     //- socketIO.on('get-now-playing', data => {
