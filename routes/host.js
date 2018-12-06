@@ -20,11 +20,14 @@ const spotifyApi = new SpotifyWebApi();
 const client_id = process.env.SPOTIFY_CLIENT_ID; // Your client id
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET; // Your secret
 
+let host_redirect_uri;
+
 if (process.env.ENVIRONMENT == 'development') {
-    redirect_uri = `http://localhost:${process.env.PORT}/host/spotify/callback/`;
+    host_redirect_uri = `http://localhost:${process.env.PORT}/host/spotify/callback/`;
 } else {
-    redirect_uri = `http://auxme.io/host/spotify/callback/`; // Your redirect uri
+    host_redirect_uri = `http://auxme.io/host/spotify/callback/`; // Your redirect uri
 }
+console.log(host_redirect_uri);
 
 const stateKey = 'spotify_auth_state';
 
@@ -128,7 +131,7 @@ module.exports = function (io) {
                 response_type: 'code',
                 client_id: client_id,
                 scope: scope,
-                redirect_uri: redirect_uri,
+                redirect_uri: host_redirect_uri,
                 state: state
             }));
     });
@@ -148,7 +151,7 @@ module.exports = function (io) {
                 url: 'https://accounts.spotify.com/api/token',
                 form: {
                     code: code,
-                    redirect_uri: redirect_uri,
+                    redirect_uri: host_redirect_uri,
                     grant_type: 'authorization_code'
                 },
                 headers: {
@@ -290,17 +293,19 @@ module.exports = function (io) {
                     seconds: req.query.seconds,
                     uri: req.query.uri,
                     imageUrl: req.query.imageUrl,
+                    votes: 0,
+                    votedBy: []
                 };
                 const track = new Track(trackConfig);
                 // console.log(game);
                 // console.log(typeof (game));
                 // if (game.queue.includes(track)) {
                 console.log(game.queue);
-                console.log(typeof(game.queue));
+                console.log(typeof (game.queue));
                 // const s = new Set(game.queue.map(item=>typeof(item)));
                 // console.log(s);
                 console.log(track);
-                console.log(typeof(track));
+                console.log(typeof (track));
                 const hashedQueue = game.queue.map(x => hash(_.omit(x, "_id")));
                 console.log("here's the hashedQueue:");
                 console.log(hashedQueue);
@@ -338,8 +343,80 @@ module.exports = function (io) {
         });
     });
 
-    router.get('/removetrack', ensureAuxMeAuthenticated, function (req, res) {
-        console.log('calling getGameByPin in removetrack');
+    router.get('/pushpool', function (req, res) {
+        console.log('calling getGameByPin in pushqueue');
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+            } else {
+                const trackConfig = {
+                    artists: req.query.artists,
+                    name: req.query.name,
+                    minutes: req.query.minutes,
+                    seconds: req.query.seconds,
+                    uri: req.query.uri,
+                    imageUrl: req.query.imageUrl,
+                    votes: req.query.votes,
+                    votedBy: req.query.votedBy
+                };
+                const track = new Track(trackConfig);
+                console.log('this is the trackConfig to be added');
+                console.log(trackConfig);
+                // console.log(typeof(track));
+                // const hashedPool = game.pool.map(x => hash(_.omit(x, ["_id", "votes", "votedBy"])));
+                // const trackHash = hash(_.omit(trackConfig, ["votes", "votedBy"]));
+                const containsTrack = () => {
+                    // const hashedPool = game.pool.map(x => hash(_.omit(x, ["_id", "votes", "votedBy"])));
+                    // const trackHash = hash(_.omit(trackConfig, ["votes", "votedBy"]));
+                    // return hashedPool.includes(trackHash);
+                    return game.pool.some(x=>x.uri==req.query.uri);
+                }
+                if (containsTrack()) {
+                    console.log('song already in pool');
+                    // async.eachOf(game.pool, (poolItem, poolIdx, eachCallback)=>{
+
+                    // }, (eachError)=>{
+                    //     if(eachError){
+                    //         console.log('yo, there was an error in the async each call');
+                    //     } else {
+                            
+                    //     }
+                    // });
+                    game.pool.forEach((poolItem, poolIdx) => {
+                        // if (hash(_.omit(poolItem, ["_id", "votes", "votedBy"])) == hash(_.omit(trackConfig, ["votes", "votedBy"]))) {
+                        if (poolItem.uri == req.query.uri && !poolItem.votedBy.includes(req.query.socketId)) {
+                            console.log('going to upvote this track');
+                            game.pool[poolIdx].votes += 1;
+                        }
+                    });
+                    game.save(function (err) {
+                        if (err) {
+                            console.log('yo, there was an error saving the pool items to the database');
+                            console.log(err);
+                        } else {
+                            console.log('updated the pool successfully in the database');
+                            res.send({ pool: game.pool });
+                        }
+                    });
+                } else {
+                    game.pool.push(track);
+                    game.save(function (err) {
+                        if (err) {
+                            console.log('yo, there was an error saving the pool items to the database');
+                            console.log(err);
+                        } else {
+                            console.log('updated the pool successfully in the database');
+                            res.send({ pool: game.pool });
+                        }
+                    });
+                }
+            }
+        });
+    });
+
+    router.get('/removetrackfromqueue', ensureAuxMeAuthenticated, function (req, res) {
+        console.log('calling getGameByPin in removetrackfromqueue');
         utils.getGameByPin(Game, req.query.pin, (err, game) => {
             if (err) {
                 console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
@@ -348,7 +425,7 @@ module.exports = function (io) {
                 const track = req.query.track;
                 console.log("here is the track to be removed:");
                 console.log(track);
-                console.log(typeof(track));
+                console.log(typeof (track));
                 game.queue = game.queue.filter(x => hash(_.omit(x, "_id")) !== hash(_.omit(track, "_id")));
                 game.save(function (err) {
                     if (err) {
@@ -363,24 +440,61 @@ module.exports = function (io) {
         });
     });
 
+    router.get('/removetrackfrompool', ensureAuxMeAuthenticated, function (req, res) {
+        console.log('calling getGameByPin in removetrackfrompool');
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+            } else {
+                const track = req.query.track;
+                console.log("here is the track to be removed:");
+                console.log(track);
+                console.log(typeof (track));
+                game.pool = game.pool.filter(x => hash(_.omit(x, "_id")) !== hash(_.omit(track, "_id")));
+                game.save(function (err) {
+                    if (err) {
+                        console.log('yo, there was an error pushing queue items to the database');
+                        console.log(err);
+                    } else {
+                        console.log('updated the queue successfully in the database');
+                        res.send({ pool: game.pool });
+                    }
+                });
+            }
+        });
+    });
+
     router.get('/getqueue', function (req, res) {
-        // console.log('This is the game model:');
-        // console.log(Game);
-        // console.log(typeof(Game));
         console.log('this is the query pin');
         console.log(req.query.pin);
-        // console.log('this is the typeof the query pin');
-        // console.log(typeof (req.query.pin));
         console.log('calling getGameByPin in getqueue');
         utils.getGameByPin(Game, req.query.pin, (err, game) => {
             if (err) {
                 console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
                 console.log(err);
             } else {
-                console.log("This is the game object:");
-                console.log(game);
-                console.log(typeof(game));
-                res.send({ queue: game.queue });
+                if (game) {
+                    res.send({ queue: game.queue });
+                } else {
+                    console.log('game is null');
+                }
+            }
+        });
+    });
+
+    router.get('/getpool', function (req, res) {
+        console.log('calling getGameByPin in getpool');
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+            } else {
+                if (game) {
+                    res.send({ pool: game.pool });
+                } else {
+                    console.log('game is null');
+                }
             }
         });
     });
@@ -392,16 +506,111 @@ module.exports = function (io) {
                 console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
                 console.log(err);
             } else {
-                game.queue.shift();
-                game.save(function (err) {
-                    if (err) {
-                        console.log('yo, there was an error pushing queue items to the database');
-                        console.log(err);
-                    } else {
-                        console.log('shifted the queue successfully in the database');
-                        res.send({ queue: game.queue });
-                    }
-                });
+                if (game) {
+                    game.queue.shift();
+                    game.save(function (err) {
+                        if (err) {
+                            console.log('yo, there was an error pushing queue items to the database');
+                            console.log(err);
+                        } else {
+                            console.log('shifted the queue successfully in the database');
+                            res.send({ queue: game.queue });
+                        }
+                    });
+                } else {
+                    console.log('game is null');
+                }
+            }
+        });
+    });
+
+    router.get('/topvotedtrack', function (req, res) {
+        console.log('calling getGameByPin in topvotedtrack');
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+            } else {
+                if (game) {
+                    let nextTrack;
+                    let nextTrackIndex = 0;
+                    const maxVotes = Math.max(game.pool.map(track => track.votes));
+                    game.pool.forEach((track, trackIdx) => {
+                        if (track.votes == maxVotes) {
+                            nextTrack = track;
+                            nextTrackIndex = trackIdx;
+                        }
+                    });
+                    game.pool.splice(nextTrackIndex, 1);
+                    game.save(function (err) {
+                        if (err) {
+                            console.log('yo, there was an error shifting pool items in the database');
+                            console.log(err);
+                        } else {
+                            console.log('shifted the pool successfully in the database');
+                            res.send({ track: nextTrack });
+                        }
+                    });
+                } else {
+                    console.log('game is null');
+                }
+            }
+        });
+    });
+
+    router.get('/vote', function (req, res) {
+        console.log('calling getGameByPin in vote');
+        utils.getGameByPin(Game, req.query.pin, (err, game) => {
+            if (err) {
+                console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+                console.log(err);
+                res.send({ err: err });
+            } else {
+                if (game.pool.some(poolTrack => poolTrack.uri == req.query.track.uri)) {
+                    game.pool.forEach((poolTrack, poolTrackIdx) => {
+                        if (poolTrack.uri == req.query.track.uri) {
+                            if (!poolTrack.votedBy.includes(req.query.socketId)) {
+                                poolTrack.votes += 1;
+                                poolTrack.votedBy.push(req.query.socketId);
+                                game.save(function (err) {
+                                    if (err) {
+                                        console.log('yo, there was an error upvoting a track in the pool');
+                                        console.log(err);
+                                        res.send({ err: err });
+                                    } else {
+                                        console.log('updated the pool successfully in the database');
+                                        res.send({ pool: game.pool });
+                                    }
+                                });
+                            } else {
+                                res.send({ err: 'already voted for this track' });
+                            }
+                        }
+                    });
+                    // game.pool = game.pool.map(poolTrack => {
+                    //     if (poolTrack.uri == req.query.track.uri) {
+                    //         if (!poolTrack.votedBy.includes(req.query.socketId)) {
+                    //             poolTrack.votes += 1;
+                    //             poolTrack.votedBy.push(req.query.socketId);
+                    //         } else {
+                    //             res.send({ err: 'Already voted for this track' });
+                    //         }
+                    //     }
+                    //     return poolTrack;
+                    // });
+                    // game.save(function (err) {
+                    //     if (err) {
+                    //         console.log('yo, there was an error upvoting a track in the pool');
+                    //         console.log(err);
+                    //         res.send({ err: err });
+                    //     } else {
+                    //         console.log('updated the pool successfully in the database');
+                    //         res.send({ pool: game.pool });
+                    //     }
+                    // });
+                } else {
+                    console.log("track not in the pool, can't vote");
+                }
             }
         });
     });
@@ -467,6 +676,19 @@ module.exports = function (io) {
                 console.log(error);
                 res.redirect('/spotify/update_auth_token');
                 // res.send({error: error});
+            });
+    });
+
+    router.get('/spotify/now-playing', ensureAuxMeAuthenticated, function (req, res) {
+        spotifyApi
+            .getMyCurrentPlayingTrack()
+            .then(data => {
+                res.send({ data: data });
+            })
+            .catch(error => {
+                console.log('yo, there was an error in /now-playing');
+                console.log(error);
+                res.redirect('/spotify/update_auth_token');
             });
     });
 

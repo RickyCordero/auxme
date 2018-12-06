@@ -20,18 +20,19 @@ const spotifyApi = new SpotifyWebApi();
 const client_id = process.env.SPOTIFY_CLIENT_ID; // Your client id
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET; // Your secret
 
+let guest_redirect_uri;
+
 if (process.env.ENVIRONMENT == 'development') {
-    redirect_uri = `http://localhost:${process.env.PORT}/guest/spotify/callback/`;
+    guest_redirect_uri = `http://localhost:${process.env.PORT}/guest/spotify/callback/`;
 } else {
-    redirect_uri = `http://auxme.io/guest/spotify/callback/`; // Your redirect uri
+    guest_redirect_uri = `http://auxme.io/guest/spotify/callback/`; // Your redirect uri
 }
+console.log(guest_redirect_uri);
 
 const stateKey = 'spotify_auth_state';
 
-let hostSpotifyToken;
 let guestSpotifyAccessToken;
 let guestSpotifyRefreshToken;
-let room;
 
 /**
  * Generates a random string containing numbers and letters
@@ -140,7 +141,7 @@ module.exports = function (io) {
                 response_type: 'code',
                 client_id: client_id,
                 scope: scope,
-                redirect_uri: redirect_uri,
+                redirect_uri: guest_redirect_uri,
                 state: state
             }));
     });
@@ -159,7 +160,7 @@ module.exports = function (io) {
                 url: 'https://accounts.spotify.com/api/token',
                 form: {
                     code: code,
-                    redirect_uri: redirect_uri,
+                    redirect_uri: guest_redirect_uri,
                     grant_type: 'authorization_code'
                 },
                 headers: {
@@ -218,6 +219,8 @@ module.exports = function (io) {
                     seconds: req.query.seconds,
                     uri: req.query.uri,
                     imageUrl: req.query.imageUrl,
+                    votes: 0,
+                    votedBy: []
                 });
                 if (game.queue.includes(track)) {
                     if (req.query.forcepush) {
@@ -249,22 +252,6 @@ module.exports = function (io) {
             }
         });
     });
-
-    // router.get('/shiftqueue', function (req, res) {
-    //     queue.shift();
-    //     res.send({ queue: queue });
-    // });
-
-    // router.get('/clearqueue', function (req, res) {
-    //     queue.length = 0;
-    //     res.send({ queue: queue });
-    // });
-
-    // router.get('/removetrack', function (req, res) {
-    //     const track = req.query.track;
-    //     queue = queue.filter(x => hash(x) !== hash(track));
-    //     res.send({ queue: queue });
-    // });
 
     router.get('/spotify/access_token', function (req, res) {
         res.send({

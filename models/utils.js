@@ -5,21 +5,29 @@ const bcrypt = require('bcryptjs');
 module.exports.getGameByPin = function (Game, pin, callback) {
     const query = { pin: pin }
     Game.findOne(query, callback);
-    // Game.findById(id, callback);
 }
 
 module.exports.getGameByHostname = function (Game, hostname, callback) {
-    var query = { hostname: hostname };
+    const query = { hostname: hostname };
+    Game.findOne(query, callback);
+}
+
+module.exports.getGameByHostSocketId = function (Game, socketId, callback) {
+    const query = { socketId: socketId };
     Game.findOne(query, callback);
 }
 
 module.exports.getGameByName = function (Game, name, callback) {
-    var query = { name: name };
+    const query = { name: name };
     Game.find(query, callback);
 }
 
 module.exports.createGame = function (newGame, callback) {
     newGame.save(callback);
+}
+
+module.exports.deleteGame = function (game, callback) {
+    game.deleteOne(game, callback);
 }
 
 // ------------------------------------------------------------------------
@@ -44,36 +52,41 @@ module.exports.createPlaylist = function (newPlaylist, callback) {
 // Track model functions
 // ------------------------------------------------------------------------
 module.exports.getTrackByUri = function (Track, uri, callback) {
-	const query = { uri: uri };
-	Track.findOne(query, callback);
-	// Track.findById(uri, callback);
+    const query = { uri: uri };
+    Track.findOne(query, callback);
+    // Track.findById(uri, callback);
 }
 
 module.exports.getTrackByName = function (Track, name, callback) {
-	var query = { name: name };
-	Track.find(query, callback);
+    var query = { name: name };
+    Track.find(query, callback);
 }
 
 module.exports.createTrack = function (newTrack, callback) {
-	newTrack.save(callback);
+    newTrack.save(callback);
 }
 
 // ------------------------------------------------------------------------
 // Player model functions
 // ------------------------------------------------------------------------
 module.exports.getPlayerByPin = function (Player, pin, callback) {
-	const query = { pin: pin };
-	Player.findOne(query, callback);
-	// Player.findById(id, callback);
+    const query = { pin: pin };
+    Player.findOne(query, callback);
+    // Player.findById(id, callback);
 }
 
-module.exports.getUserByUsername = function (Player, username, callback) {
-	var query = { username: username };
-	Player.findOne(query, callback);
+module.exports.getPlayerBySocketId = function (Player, socketId, callback) {
+    const query = { socketId: socketId };
+    Player.findOne(query, callback);
+}
+
+module.exports.getPlayerByUsername = function (Player, username, callback) {
+    var query = { username: username };
+    Player.findOne(query, callback);
 }
 
 module.exports.createPlayer = function (newPlayer, callback) {
-	newPlayer.save(callback);
+    newPlayer.save(callback);
 }
 
 // ------------------------------------------------------------------------

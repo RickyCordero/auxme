@@ -4,6 +4,8 @@ block content
   #players-list
   #queue-container
     #queue-items
+  #pool-container
+    #pool-items
   button(class="waves-effect btn-flat" id="my-playlists") My playlists
   button(class="waves-effect btn-flat" id="my-tracks") My tracks
   button(class="waves-effect btn-flat" id="clearqueue") Clear queue
@@ -81,14 +83,22 @@ block content
     };
 
     const removeTrackFromQueue = (track) => {
-      $.get('/host/removetrack', {track:track, pin: pin}, (data, status)=>{
+      $.get('/host/removetrackfromqueue', {track:track, pin: pin}, (data, status)=>{
         console.log(data);
         console.log(status);
       });
       socketIO.emit('remove-track-from-queue', {track:track, pin: pin});
     };
+    
+    const removeTrackFromPool = (track) => {
+      $.get('/host/removetrackfrompool', {track:track, pin: pin}, (data, status)=>{
+        console.log(data);
+        console.log(status);
+      });
+      socketIO.emit('remove-track-from-pool', {track:track, pin: pin});
+    };
 
-    const renderTrack = (track, idx) => {
+    const renderQueueTrack = (track, idx) => {
       const artists = track.artists;
       const name = track.name;
       const minutes = track.minutes;
@@ -109,43 +119,43 @@ block content
         </div>
       </div>
       `;
-      //- $(tile).hide().appendTo($('#queue-items')).show('normal');
       $('#queue-items').append(tile);
-      //- setTimeout(()=>{
-      //-   $(`#queue_track_${idx}`).show('slow');
-      //- }, 1000);
+    };
+
+    const renderPoolTrack = (track, idx) => {
+      console.log('calling renderPoolTrack');
+      const artists = track.artists;
+      const name = track.name;
+      const minutes = track.minutes;
+      let seconds = track.seconds;
+      const imageUrl = track.imageUrl;
+      const uri = track.uri;
+      const votes = track.votes;
+      const tile = `
+      <div class="card small" id="pool_track_${idx}">
+        <div class="card-image waves-effect waves-light" id="pool_track_image_${idx}">
+          <img src="${imageUrl}">
+          <span class="card-title card-title-custom">${artists}</span>
+        </div>
+        <div class="card-content card-content-custom">
+          <span>${name}</span>
+        </div>
+        <div class="card-action">
+          <div id="pool_upvote_count_${idx}">${votes}</div>
+          <div class="remove" id="pool_remove_${idx}">REMOVE FROM POOL</div>
+        </div>
+      </div>
+      `;
+      $('#pool-items').append(tile);
     };
 
     const renderQueue = () => {
       $('#queue-items').empty();
       $.get('/host/getqueue', {pin: pin}, (queueData, queueStatus)=>{
-        //- console.log(queueData);
         let g = new Promise((resolve, reject)=>{
           //- async.eachOfSeries(queueData.queue, (queueItem, queueIdx)=>{
           async.forEachOf(queueData.queue, (queueItem, queueIdx)=>{
-            //- const tile = `
-            //- <div class="card small" id="queue_track_${queueIdx}" style="display: none;">
-            //-   <div class="card-image waves-effect waves-light" id="track_${queueIdx}">
-            //-     <img src="${queueItem.imageUrl}">
-            //-     <span class="card-title card-title-custom">${queueItem.artists}</span>
-            //-   </div>
-            //-   <div class="card-content card-content-custom">
-            //-     <span>${queueItem.name}</span>
-            //-   </div>
-            //-   <div class="card-action">
-            //-     <div class="remove" id="remove_${queueIdx}">REMOVE FROM QUEUE</div>
-            //-   </div>
-            //- </div>
-            //- `;
-            //- $('#queue-items').append(tile);
-            //- $(`#queue_track_${queueIdx}`).show('slow');
-            renderTrack(queueItem, queueIdx);
-            //- const show = index => {
-            //-   setTimeout(function(){
-            //-     $(`#queue_track_${index}`).show('slow');
-            //-   }, 1000);
-            //- };
-            //- show(queueIdx);
+            renderQueueTrack(queueItem, queueIdx);
             $(`#track_${queueIdx}`).on('click', event=>{
               socketIO.emit('update-snackbar', {message:`Playing ${queueItem.name}`, pin: pin});
               socketIO.emit('update-now-playing', {artists:queueItem.artists, name:queueItem.name, uri: queueItem.uri, pin: pin});
@@ -153,9 +163,37 @@ block content
             $(`#remove_${queueIdx}`).on('click', event=>{
               console.log(queueItem);
               removeTrackFromQueue(queueItem);
-              //- socketIO.emit('render-queue');
               $(`#queue_track_${queueIdx}`).hide('slow', function(){
                 $(`#queue_track_${queueIdx}`).remove();
+              });
+            });
+          }, function(err){
+            if(err){
+              reject(err);
+            } else {
+              resolve(null);
+            }
+          });
+        });
+        g.then(res=>{
+          //- cb(res);
+        });
+      });
+    };
+
+    const renderPool = () => {
+      console.log('calling renderPool');
+      $('#pool-items').empty();
+      $.get('/host/getpool', {pin: pin}, (poolData, poolStatus)=>{
+        let g = new Promise((resolve, reject)=>{
+          async.forEachOf(poolData.pool, (poolItem, poolIdx)=>{
+            renderPoolTrack(poolItem, poolIdx);
+            //- On click remove from pool
+            $(`#pool_remove_${poolIdx}`).on('click', event=>{
+              console.log(poolItem);
+              removeTrackFromPool(poolItem);
+              $(`#pool_track_${poolIdx}`).hide('slow', function(){
+                $(`#pool_track_${poolIdx}`).remove();
               });
             });
           }, function(err){
@@ -204,19 +242,31 @@ block content
     //- Listen for host-join signal from server
     socketIO.on('host-join', data => {
       console.log(data.message);
-      updateSnackbar(data.message);
+      //- updateSnackbar(data.message);
+      renderQueue();
+      updatePlayers();
     });
 
     const updatePlayers = () => {
       $.get('/host/getplayers', {pin: pin}, (data, status)=>{
         $('#player-items').empty();
-        console.log(data);
         data.players.forEach((player, playerIdx)=>{
-          const playerHtml = `
-          <li class="collection-item avatar" id="player_${playerIdx}">
-            <span class="title">${player.username}</span>
-          </li>
-          `;
+          let playerHtml = "";
+          if(player.isHost){
+            playerHtml = `
+            <li class="collection-item avatar" id="player_${playerIdx}">
+              <span class="title">${player.username}</span>
+              <span>[HOST]</span>
+            </li>
+            `;
+          } else {
+            playerHtml = `
+            <li class="collection-item avatar" id="player_${playerIdx}">
+              <span class="title">${player.username}</span>
+              <span>[GUEST]</span>
+            </li>
+            `;
+          }
           $('#player-items').append(playerHtml);
         });
       });
@@ -243,6 +293,13 @@ block content
       document.title = data.name;
     };
 
+    const getNowPlaying = (cb) => {
+      $.get('/host/now-playing', (data, status)=>{
+        console.log(data);
+        cb(data, status);
+      });
+    };
+
     //- Listen for guest-join signal from server
     socketIO.on('guest-join', data => {
       console.log(data);
@@ -256,14 +313,15 @@ block content
       updatePlayers();
     });
 
-    //- On guest join via client
+    //- Listen for guest-leave signal from server
     socketIO.on('guest-leave', data => {
       console.log(data);
-      const displayName = data.displayName;
-      updateSnackbar(`guest ${displayName} has left the room`);
+      const username = data.username;
+      updateSnackbar(`guest ${username} has left the room`);
+      updatePlayers();
     });
 
-    //- Listen for guest-join signal from server
+    //- Listen for get-host-spotify-access-token signal from server
     socketIO.on('get-host-spotify-access-token', data => {
       console.log('handling get-host-spotify-access-token event with data:');
       console.log('this is data.room:');
@@ -294,6 +352,13 @@ block content
       renderQueue();
     });
 
+    //- Listen for render-pool signal from server
+    socketIO.on('render-pool', data => {
+      console.log('going to render the pool using socket.io');
+      console.log(data);
+      renderPool();
+    });
+
     //- Listen for clear-queue signal from server
     socketIO.on('clear-queue', () => {
       console.log('going to clear queue using socket.io');
@@ -315,10 +380,16 @@ block content
       updatePlayback();
     });
 
+    //- const updateNowPlaying = () => {
+
+    //- };
+
     //- Listen for get-now-playing signal from server
-    socketIO.on('get-now-playing', data => {
-      socketIO.emit('update-now-playing', {artists: track.artists, name: track.name, uri: track.uri, pin: pin});
-    });
+    //- socketIO.on('get-now-playing', data => {
+    //-   getNowPlaying((status, data)=>{
+    //-     socketIO.emit('update-now-playing', {artists: data.track.artists, name: data.track.name, uri: data.track.uri, pin: pin});
+    //-   });
+    //- });
 
 
     window.onSpotifyWebPlaybackSDKReady = () => {
@@ -343,7 +414,7 @@ block content
         }
         //- Create only one Player with different auth tokens
         const player = new Spotify.Player({
-            name: 'AuxMe',
+            name: 'auxme',
             getOAuthToken: cb => { cb(getHostAccessToken()); }
         });
 
@@ -510,7 +581,7 @@ block content
         });
 
         $('#my-playlists').on('click', event => {
-          $('#palylist-track-items').empty();
+          $('#playlist-track-items').empty();
           $('#track-container').hide('slow');
           const speed = 500;
           if(!$('#playlist-container').is(':visible')){
@@ -619,8 +690,6 @@ block content
           }
           $("#playlist-container").slideToggle(speed);
         });
-
-        renderQueue();
         //- socket.emit('render-queue');
 
         $('#clearqueue').on('click', event=>{
@@ -640,7 +709,7 @@ block content
               } else {
                 socketIO.emit('update-snackbar', {message:`The queue is empty`, pin: pin});
                 socketIO.emit('update-now-playing', {artists: '', name:'', uri:'', pin: pin});
-                document.title = "AuxMe";
+                document.title = "auxme";
               }
             } else {
               console.log('yo, there was some shiftqueue error');
@@ -670,11 +739,49 @@ block content
           generatePartyCode();
         });
 
+        function selectTopVotedTrack() {
+          return new Promise((resolve, reject)=>{
+            $.get('/host/topvotedtrack', {pin: pin}, (data, status)=>{
+              console.log(data.track);
+              if(data.track){
+                resolve(data.track);
+              } else {
+                reject('yo, there was an error getting the top voted track in the pool');
+              }
+            });
+          });
+        }
+
+        function playTrack(track){
+          return new Promise((resolve, reject)=>{
+            if(track){
+              $.get('/host/spotify/play', {uri: track.uri, device_id: deviceId, access_token: token}, (_playData, _playStatus) => {
+                socketIO.emit('update-snackbar', {message:`Now playing ${track.name}`, pin: pin});
+                socketIO.emit('update-now-playing', {artists: track.artists, name: track.name, uri: track.uri, pin: pin});
+                document.title = track.name;
+                resolve('successfully played track');
+              });
+            } else {
+              reject('track is null');
+            }
+          });
+        }
+
         player.addListener('player_state_changed', state => {
           console.log(state);
           if(this.state && !this.state.paused && state.paused && state.position === 0) {
             // track ended
-            shiftQueue();
+            //- shiftQueue();
+            selectTopVotedTrack()
+            .then(track=>{
+              console.log(track);
+              playTrack(track)
+              .then(res=>{
+                console.log(res);
+              })
+              .catch(err=>console.log(err));
+            })
+            .catch(err=>console.log(err));
           }
           this.state = state;
         });

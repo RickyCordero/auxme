@@ -1,7 +1,7 @@
 doctype html
 html(lang='en')
   head
-    title AuxMe
+    title auxme
     script(src='https://code.jquery.com/jquery-3.3.1.min.js')
     script(src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js")
     //- Bootstrap
@@ -62,13 +62,29 @@ html(lang='en')
         display: flex;
         margin: 0 auto;
       }
+      #pool-container{
+        display: flex;
+        margin: 0 auto;
+      }
       #queue-items{
         display: flex;
         flex-wrap: nowrap;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
       }
+      #pool-items{
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
       #queue-items > div {
+        background-color: #f1f1f1;
+        margin: 10px;
+        padding: 20px;
+        font-size: 30px;
+      }
+      #pool-items > div {
         background-color: #f1f1f1;
         margin: 10px;
         padding: 20px;
@@ -170,20 +186,6 @@ html(lang='en')
         flex-direction: column; 
         */
       }
-
-      /* ---- particles.js container ---- */
-
-      #particles {
-        position: absolute;
-        z-index: -1;
-        width: 100%;
-        height: 100%;
-        /* background-color: #232741; */
-        background-repeat: no-repeat;
-        background-size: 100%;
-        background-position: 0% 0%;
-      }
-      /* -------------------------------------------------------- */
       /*
       main {
         flex: 1 0 auto;
@@ -240,6 +242,10 @@ html(lang='en')
         background-color: #6ea3e1;
       }
       .remove{
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .vote{
         font-size: 12px;
         cursor: pointer;
       }

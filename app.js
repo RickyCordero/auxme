@@ -136,100 +136,198 @@ io.on('connection', function (socket) {
   // console.log(io.sockets.adapter.rooms);
   socket.on('host-join', data => {
     console.log(data);
-    socket.join(data.pin, () => {
-      const host = new Player({
-        username: data.hostName,
-        pin: data.pin
-      });
-
-      // Player.createPlayer(host, (err, player) => {
-      //   if (err) console.log(err);
-      //   console.log(player);
-      // });
-
-      const newGame = new Game({
-        hostname: data.hostName,
-        name: data.partyName,
-        pin: data.pin,
-        queue: [],
-        players: [host]
-      });
-
-      utils.createGame(newGame, (err, game) => {
-        if (err) {
-          console.log('yo, there was an error creating a game');
-          console.log(err);
-        } else {
-          console.log('created the game successfully');
-          console.log("This is the game object:");
-          console.log(game);
-          console.log(typeof (game));
-        }
-      });
-
-      // Game.getGameByPin(data.pin, (err, game) => {
-
-      //   console.log('here is the error');
-      //   console.log(err);
-
-      //   if (err) {
-      //     console.log(`yo, there was an error finding the game with pin ${data.pin}`)
-      //     // socket.emit('no-game-found', { pin: data.pin });
-      //   } else {
-      //     console.log('here is the game object');
-      //     console.log(game);
-      //     console.log(typeof (game));
-      //     console.log('here is the game queue');
-      //     console.log(game.queue);
-      //     console.log(typeof (game.queue));
-      //   }
-      // });
-
-      socket.broadcast.to(data.pin).emit('host-join', { message: `a host has joined a room with party code ${data.pin}` });
-    });
-  });
-  socket.on('disconnect', _data => {
-    // let p;
-    // games.forEach((game, gameIdx) => {
-    //   game.players.forEach((player, playerIdx) => {
-    //     if (player.socketId == socket.id) {
-    //       p = player;
-    //       game.players.splice(playerIdx, 1); // modifies players array in place
-    //       console.log(`removed player ${p.displayName} with socketid ${socket.id} in room ${p.room}`);
+    // const removeGame = new Promise((resolve, reject) => {
+    //   console.log(socket.id);
+    //   utils.getGameByHostSocketId(Game, socket.id, (err, game) => {
+    //     if (err) {
+    //       console.log(`yo, there was an error finding the game with pin ${data.pin}`);
+    //       reject(err);
+    //     } else {
+    //       if (game) {
+    //         console.log("found a game with this host's socket id");
+    //         utils.deleteGame(game, (err) => {
+    //           if (err) {
+    //             console.log('yo, there was an error removing the existing game from the database');
+    //             reject(err);
+    //           } else {
+    //             console.log('successfully removed the game from the database');
+    //             resolve();
+    //           }
+    //         });
+    //       } else {
+    //         console.log('the game is null');
+    //         resolve();
+    //       }
     //     }
     //   });
     // });
-    // if (p) {
-    //   io.in(p.room).emit('guest-leave', { displayName: p.displayName, room: p.room, socketId: socket.id });
-    // } else {
-    //   // user left a room but never joined a game
-    // }
-  });
-  socket.on('guest-join', data => {
-    console.log(data);
+    // removeGame.then(() => {
+    //   socket.join(data.pin, () => {
+    //     const host = new Player({
+    //       username: data.hostName,
+    //       socketId: socket.id,
+    //       pin: data.pin,
+    //       isHost: true
+    //     });
+    //     utils.createPlayer(host, (err, player) => {
+    //       if (err) {
+    //         console.log('yo, there was an error creating a host player');
+    //       } else {
+    //         console.log('created the host player successfully');
+    //         console.log('this is the host player object');
+    //         console.log(player);
+
+    //         const newGame = new Game({
+    //           hostname: data.hostName,
+    //           name: data.partyName,
+    //           pin: data.pin,
+    //           queue: [],
+    //           players: [host],
+    //           pool: []
+    //         });
+
+    //         utils.createGame(newGame, (err, game) => {
+    //           if (err) {
+    //             console.log('yo, there was an error creating a game');
+    //             console.log(err);
+    //           } else {
+    //             console.log('created the game successfully');
+    //             console.log("This is the game object:");
+    //             console.log(game);
+    //             console.log(typeof (game));
+    //             socket.broadcast.to(data.pin).emit('host-join', { message: `a host has joined a room with party code ${data.pin}` });
+    //           }
+    //         });
+    //       }
+    //     });
+    //   });
+    // }).catch(err => {
+    //   console.log("yo, there was an error in removing a game from the database");
+    //   console.log(err);
+    // });
     socket.join(data.pin, () => {
-      utils.getGameByPin(Game, data.pin, (err, game) => {
+      const host = new Player({
+        username: data.hostName,
+        socketId: socket.id,
+        pin: data.pin,
+        isHost: true
+      });
+      utils.createPlayer(host, (err, player) => {
         if (err) {
-          console.log(`yo, there was an error finding the game with pin ${data.pin}`)
-          socket.emit('no-game-found', { pin: data.pin });
+          console.log('yo, there was an error creating a host player');
         } else {
-          const guest = new Player({
-            username: data.displayName,
-            pin: data.pin
+          console.log('created the host player successfully');
+          console.log('this is the host player object');
+          console.log(player);
+
+          const newGame = new Game({
+            hostname: data.hostName,
+            name: data.partyName,
+            pin: data.pin,
+            queue: [],
+            players: [host],
+            pool: []
           });
-          game.players.push(guest);
-          game.save(function (err) {
+
+          utils.createGame(newGame, (err, game) => {
             if (err) {
-              console.log('yo, there was an error adding a guest to the game database');
+              console.log('yo, there was an error creating a game');
               console.log(err);
             } else {
-              console.log('updated the players successfully in the game database');
-              socket.broadcast.to(data.pin).emit('guest-join', data);
+              console.log('created the game successfully');
+              console.log("This is the game object:");
+              console.log(game);
+              console.log(typeof (game));
+              io.in(data.pin).emit('host-join', { message: `a host has joined a room with party code ${data.pin}` });
             }
           });
         }
       });
     });
+  });
+  // socket.on('disconnect', _data => {
+  //   console.log(_data);
+  //   utils.getPlayerBySocketId(Player, socket.id, (err, player) => {
+  //     if (err) {
+  //       console.log(`yo, there was an error getting the player with socketId ${socket.id}`);
+  //       console.log(err);
+  //     } else {
+  //       console.log(`yo, a player was found with socketId ${socket.id}`);
+  //       console.log(player);
+  //       utils.getGameByPin(Game, player.pin, (err, game) => {
+  //         if (err) {
+  //           console.log(`yo, there was an error finding the game with pin ${player.pin}`);
+  //         } else {
+  //           console.log(`found a game with pin ${player.pin}`);
+  //           game.players = game.players.filter(p => p.socketId !== socket.id);
+  //           game.save(function (err) {
+  //             if (err) {
+  //               console.log('yo, there was an error removing a guest from the game database');
+  //               console.log(err);
+  //             } else {
+  //               console.log('removed a player successfully from the game database');
+  //               // socket.broadcast.to(data.pin).emit('guest-join', data);
+  //               io.in(player.pin).emit('guest-leave', { username: player.username, room: player.pin, socketId: socket.id });
+  //             }
+  //           });
+  //         }
+  //       })
+  //     }
+  //   });
+  // });
+  socket.on('guest-join', data => {
+    console.log(data);
+
+    if (parseInt(data.pin)) {
+      utils.getGameByPin(Game, data.pin, (err, game) => {
+        if (err) {
+          console.log(`yo, there was an error finding the game with pin ${data.pin}`)
+          socket.emit('no-game-found', { pin: data.pin });
+        } else {
+          if (game) {
+            const guest = new Player({
+              username: data.displayName,
+              socketId: socket.id,
+              pin: data.pin,
+              isHost: false
+            });
+            console.log(game);
+            console.log(game.players);
+            console.log(guest.sockedId);
+            if (game.players.some(x => x.socketId == guest.socketId)) {
+              console.log('there already exists a player with this socketId, not adding to database');
+              socket.emit('already-in-game', {message:`already in room ${data.pin}`});
+            } else {
+              utils.createPlayer(guest, (err, player) => {
+                if (err) {
+                  console.log('yo, there was an error creating a guest player');
+                } else {
+                  console.log('created the guest player successfully');
+                  console.log('this is the guest player object');
+                  console.log(player);
+                  game.players.push(guest);
+                  game.save(function (err) {
+                    if (err) {
+                      console.log('yo, there was an error adding a guest to the game database');
+                      console.log(err);
+                    } else {
+                      console.log('updated the players successfully in the game database');
+                      socket.join(data.pin, () => {
+                        socket.broadcast.to(data.pin).emit('guest-join', data);
+                      });
+                    }
+                  });
+                }
+              });
+            }
+          } else {
+            console.log('game was null');
+          }
+        }
+      });
+    } else {
+      socket.emit('no-game-found', { pin: data.pin });
+    }
   });
   socket.on('get-host-spotify-access-token', data => {
     console.log("a request has been made for the host's spotify token");
@@ -256,6 +354,12 @@ io.on('connection', function (socket) {
     console.log('going to render the queue');
     io.in(room).emit('render-queue');
   });
+  socket.on('render-pool', data => {
+    console.log(data);
+    const room = data.pin;
+    console.log('going to render the pool');
+    io.in(room).emit('render-pool');
+  });
   socket.on('clear-queue', data => {
     console.log(data);
     const room = data.pin;
@@ -267,6 +371,12 @@ io.on('connection', function (socket) {
     const room = data.pin;
     console.log('going to remove a track from the queue');
     io.in(room).emit('remove-track-from-queue', { track: data.track });
+  });
+  socket.on('remove-track-from-pool', data => {
+    console.log(data);
+    const room = data.pin;
+    console.log('going to remove a track from the pool');
+    io.in(room).emit('remove-track-from-pool', { track: data.track });
   });
   socket.on('update-snackbar', data => {
     console.log(data);

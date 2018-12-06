@@ -9,8 +9,14 @@ const PlayerSchema = mongoose.Schema({
 		type: String,
 		index: true
 	},
+	socketId: {
+		type: String
+	},
 	pin: {
 		type: String
+	},
+	isHost: {
+		type: Boolean
 	}
 }, { usePushEach: true });
 

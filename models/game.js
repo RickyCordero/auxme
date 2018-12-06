@@ -20,6 +20,9 @@ const GameSchema = mongoose.Schema({
 	},
 	players: {
 		type: Array
+	},
+	pool: {
+		type: Array
 	}
 }, { usePushEach: true });
 

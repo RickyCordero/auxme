@@ -23,6 +23,12 @@ const TrackSchema = mongoose.Schema({
 	},
 	imageUrl: {
 		type: String
+	},
+	votes: {
+		type: Number
+	},
+	votedBy: {
+		type: Array
 	}
 }, { usePushEach: true });
 
