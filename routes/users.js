@@ -134,7 +134,7 @@ module.exports = function (io) {
       req.flash('success', 'You are now registered and can login');
 
       res.location('/');
-      res.redirect('/');
+      res.redirect('/users/login');
     }
   });
 
