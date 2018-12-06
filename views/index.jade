@@ -2,6 +2,7 @@ doctype html
 html(lang='en')
   head
     title AuxMe
+    meta(content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport")
     script(src='https://code.jquery.com/jquery-3.3.1.min.js')
     script(src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js")
     //- Bootstrap
@@ -69,7 +70,7 @@ html(lang='en')
   body
     .main-content
         .row
-            .col.s6
+            div(style="text-align:center;")
                 #auxme-logo auxme
                 button(id="signup" class="waves-effect btn-flat")
                     a(href="/users/register") SIGN UP
@@ -79,5 +80,3 @@ html(lang='en')
                 .divider
                 button(id="join" class="waves-effect btn-flat")
                     a(id="join" href="/join") JOIN A PARTY
-            .col.s6
-                #message Let's get social with sound
