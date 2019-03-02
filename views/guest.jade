@@ -3,27 +3,21 @@ extends layout
 block content
   h1 Welcome, #{displayName}
   h2 Party: #{pin}
-  //- a(href="/guest/spotify/login" class="waves-effect btn-flat" id="spotify-login") Sign into spotify
-  //- a(href="/guest/apple/login" class="waves-effect btn-flat" id="apple-login") Sign into Apple Music
-  //- a(href="/guest/tidal/login" class="waves-effect btn-flat" id="tidal-login") Sign into Tidal
-  //- a(href="/guest/soundcloud/login" class="waves-effect btn-flat" id="soundcloud-login") Sign into Soundcloud
   #players-list
   #queue-container
     #queue-items
   #pool-container
     #pool-items
   //- button(class="waves-effect btn-flat" id="show-players") Show players
-  //- button(class="waves-effect btn-flat" id="obtain-new-token") Refresh token
   #playlist-container
     #playlist-items
   #snackbar
   script(src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js")
   script.
+    /*
+    * What a guest sees
+    */
     let hostToken;
-    let spotifyToken;
-    let appleToken;
-    let tidalToken;
-    let soundcloudToken;
     const displayName = "#{displayName}";
     let pin = "#{pin}";
 
@@ -359,36 +353,6 @@ block content
     socketIO.on('pause', data => {
       $('#play_pause_image').text('pause');
     });
-
-    // authenticate the client Spotify web api
-    // get token via back end using authorization code flow
-    //- $('#spotify-login').on('click', event => {
-    //-   $.get('/guest/spotify/access_token', function (data, status) {
-    //-     spotifyToken = data.access_token;
-    //-     socketIO.emit('new-spotify-token', {token: data.access_token});
-    //-   });
-    //- });
-
-    //- $('#apple-login').on('click', event => {
-    //-   $.get('/guest/apple/access_token', function (data, status) {
-    //-     appleToken = data.access_token;
-    //-     socketIO.emit('new-apple-token', {token: data.access_token});
-    //-   });
-    //- });
-
-    //- $('#tidal-login').on('click', event => {
-    //-   $.get('/guest/tidal/access_token', function (data, status) {
-    //-     tidalToken = data.access_token;
-    //-     socketIO.emit('new-tidal-token', {token: data.access_token});
-    //-   });
-    //- });
-
-    //- $('#soundcloud-login').on('click', event => {
-    //-   $.get('/guest/soundcloud/access_token', function (data, status) {
-    //-     soundcloudToken = data.access_token;
-    //-     socketIO.emit('new-soundcloud-token', {token: data.access_token});
-    //-   });
-    //- });
 
     $('#show-players').on('click', event => {
       $.get('/guest/getplayers', (data, status)=>{

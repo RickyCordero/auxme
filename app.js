@@ -3,10 +3,8 @@ const express = require('express');
 const socketIO = require('socket.io');
 const app = express();
 const io = socketIO();
+// TODO: Verify if this is needed
 app.io = io;
-
-// Utilities
-const hash = require('object-hash');
 
 // Middleware
 const path = require('path');
@@ -23,393 +21,17 @@ const upload = multer({ dest: './uploads' });
 const flash = require('connect-flash');
 const bcrypt = require('bcryptjs');
 
-// Database modules
-const mongo = require('mongodb');
-const mongoose = require('mongoose');
-const utils = require('./models/utils');
-// const db = mongoose.connection;
-// const connection = mongoose.createConnection(process.env.MONGODB_URI);
-
-require('./models/game');
-require('./models/playlist');
-require('./models/track');
-require('./models/player');
-require('./models/user');
-
-const Game = mongoose.model("Game");
-const Playlist = mongoose.model("Playlist");
-const Track = mongoose.model("Track");
-const Player = mongoose.model("Player");
-const User = mongoose.model("User");
-
-mongoose.connect(process.env.MONGODB_URI, {
-  useCreateIndex: true,
-  useNewUrlParser: true
-});
-
-// Mongoose models
-// const models = {
-//   Game: require('./models/game')(connection),
-//   Playlist: require('./models/playlist')(connection),
-//   Track: require('./models/track')(connection),
-//   Player: require('./models/player')(connection),
-//   User: require('./models/user')(connection)
-// };
-
-// const models = {
-//   Game: require('./models/game')(),
-//   Playlist: require('./models/playlist')(),
-//   Track: require('./models/track')(),
-//   Player: require('./models/player')(),
-//   User: require('./models/user')()
-// };
-
-// const Game = models.Game;
-// const Playlist = models.Playlist;
-// const Track = models.Track;
-// const Player = models.Player;
-// const User = models.User;
-
 // Express routes
-const routes = require('./routes/index')(io);
-const users = require('./routes/users')(io);
-const host = require('./routes/host')(io);
-const guest = require('./routes/guest')(io);
-
-// MongoDB collections
-const gamesCollection = "games";
-const playersCollection = "players";
-const playlistsCollection = "playlists";
-const tracksCollection = "tracks";
-
-
-// MongoDB functions -----------------------------------------------
-
-/**
- * Finds documents in a MongoDB database given a query object and
- * the MongoDB collection in which the documents should be found,
- * and returns an array of  all results.
- * @param {MongoDB Database} db - The MongoDB database to be searched
- * @param {Object} query - The query object
- * @param {String} collection - The collection name
- */
-function findDocuments(db, query, collection) {
-  const coll = db.collection(collection);
-  return coll.find(query).toArray();
-}
-
-function insertDocument(db, document, collection) {
-  const coll = db.collection(collection); // get the collection from the database
-  return coll.insert(document); // return promise
-}
-
-function getAllDocuments(db, collection) {
-  const coll = db.collection(collection); // get the collection from the database
-  return coll.find({}).toArray(); // return promise
-  // return findDocuments(db, {}, collection);
-}
-
-function removeDocument(db, document, collection) {
-  const coll = db.collection(collection); // get the collection from the database
-  return coll.deleteOne(document); // return promise
-}
-
-function removeAllDocuments(db, collection) {
-  const coll = db.collection(collection);
-  return coll.remove({});
-}
-
-function updateDocument(db, document, update, collection) {
-  const coll = db.collection(collection); // get the collection from the database
-  return coll.updateOne(document, { $set: update }, null); // return promise
-}
-
-// --------------------------------------------------------------------------------
-
+const indexRoutes = require('./routes/index');
+const usersRoutes = require('./routes/users');
+const hostRoutes = require('./routes/host');
+const guestRoutes = require('./routes/guest');
 
 // Socket.io --------------------------------------------------------------------------
 
-io.on('connection', function (socket) {
+const ioEventsHandler = require('./io/events');
 
-  console.log('a socket has connected to the server');
-  // console.log(socket.id); // socketId is the default room the socket is in
-  // console.log(io.sockets.adapter.rooms);
-  socket.on('host-join', data => {
-    console.log(data);
-    // const removeGame = new Promise((resolve, reject) => {
-    //   console.log(socket.id);
-    //   utils.getGameByHostSocketId(Game, socket.id, (err, game) => {
-    //     if (err) {
-    //       console.log(`yo, there was an error finding the game with pin ${data.pin}`);
-    //       reject(err);
-    //     } else {
-    //       if (game) {
-    //         console.log("found a game with this host's socket id");
-    //         utils.deleteGame(game, (err) => {
-    //           if (err) {
-    //             console.log('yo, there was an error removing the existing game from the database');
-    //             reject(err);
-    //           } else {
-    //             console.log('successfully removed the game from the database');
-    //             resolve();
-    //           }
-    //         });
-    //       } else {
-    //         console.log('the game is null');
-    //         resolve();
-    //       }
-    //     }
-    //   });
-    // });
-    // removeGame.then(() => {
-    //   socket.join(data.pin, () => {
-    //     const host = new Player({
-    //       username: data.hostName,
-    //       socketId: socket.id,
-    //       pin: data.pin,
-    //       isHost: true
-    //     });
-    //     utils.createPlayer(host, (err, player) => {
-    //       if (err) {
-    //         console.log('yo, there was an error creating a host player');
-    //       } else {
-    //         console.log('created the host player successfully');
-    //         console.log('this is the host player object');
-    //         console.log(player);
-
-    //         const newGame = new Game({
-    //           hostname: data.hostName,
-    //           name: data.partyName,
-    //           pin: data.pin,
-    //           queue: [],
-    //           players: [host],
-    //           pool: []
-    //         });
-
-    //         utils.createGame(newGame, (err, game) => {
-    //           if (err) {
-    //             console.log('yo, there was an error creating a game');
-    //             console.log(err);
-    //           } else {
-    //             console.log('created the game successfully');
-    //             console.log("This is the game object:");
-    //             console.log(game);
-    //             console.log(typeof (game));
-    //             socket.broadcast.to(data.pin).emit('host-join', { message: `a host has joined a room with party code ${data.pin}` });
-    //           }
-    //         });
-    //       }
-    //     });
-    //   });
-    // }).catch(err => {
-    //   console.log("yo, there was an error in removing a game from the database");
-    //   console.log(err);
-    // });
-    socket.join(data.pin, () => {
-      const host = new Player({
-        username: data.hostName,
-        socketId: socket.id,
-        pin: data.pin,
-        isHost: true
-      });
-      utils.createPlayer(host, (err, player) => {
-        if (err) {
-          console.log('yo, there was an error creating a host player');
-        } else {
-          console.log('created the host player successfully');
-          console.log('this is the host player object');
-          console.log(player);
-
-          const newGame = new Game({
-            hostname: data.hostName,
-            name: data.partyName,
-            pin: data.pin,
-            queue: [],
-            players: [host],
-            pool: []
-          });
-
-          utils.createGame(newGame, (err, game) => {
-            if (err) {
-              console.log('yo, there was an error creating a game');
-              console.log(err);
-            } else {
-              console.log('created the game successfully');
-              console.log("This is the game object:");
-              console.log(game);
-              console.log(typeof (game));
-              io.in(data.pin).emit('host-join', { message: `a host has joined a room with party code ${data.pin}` });
-            }
-          });
-        }
-      });
-    });
-  });
-  // socket.on('disconnect', _data => {
-  //   console.log(_data);
-  //   utils.getPlayerBySocketId(Player, socket.id, (err, player) => {
-  //     if (err) {
-  //       console.log(`yo, there was an error getting the player with socketId ${socket.id}`);
-  //       console.log(err);
-  //     } else {
-  //       console.log(`yo, a player was found with socketId ${socket.id}`);
-  //       console.log(player);
-  //       utils.getGameByPin(Game, player.pin, (err, game) => {
-  //         if (err) {
-  //           console.log(`yo, there was an error finding the game with pin ${player.pin}`);
-  //         } else {
-  //           console.log(`found a game with pin ${player.pin}`);
-  //           game.players = game.players.filter(p => p.socketId !== socket.id);
-  //           game.save(function (err) {
-  //             if (err) {
-  //               console.log('yo, there was an error removing a guest from the game database');
-  //               console.log(err);
-  //             } else {
-  //               console.log('removed a player successfully from the game database');
-  //               // socket.broadcast.to(data.pin).emit('guest-join', data);
-  //               io.in(player.pin).emit('guest-leave', { username: player.username, room: player.pin, socketId: socket.id });
-  //             }
-  //           });
-  //         }
-  //       })
-  //     }
-  //   });
-  // });
-  socket.on('guest-join', data => {
-    console.log(data);
-
-    if (parseInt(data.pin)) {
-      utils.getGameByPin(Game, data.pin, (err, game) => {
-        if (err) {
-          console.log(`yo, there was an error finding the game with pin ${data.pin}`)
-          socket.emit('no-game-found', { pin: data.pin });
-        } else {
-          if (game) {
-            const guest = new Player({
-              username: data.displayName,
-              socketId: socket.id,
-              pin: data.pin,
-              isHost: false
-            });
-            console.log(game);
-            console.log(game.players);
-            console.log(guest.sockedId);
-            if (game.players.some(x => x.socketId == guest.socketId)) {
-              console.log('there already exists a player with this socketId, not adding to database');
-              socket.emit('already-in-game', {message:`already in room ${data.pin}`});
-            } else {
-              utils.createPlayer(guest, (err, player) => {
-                if (err) {
-                  console.log('yo, there was an error creating a guest player');
-                } else {
-                  console.log('created the guest player successfully');
-                  console.log('this is the guest player object');
-                  console.log(player);
-                  game.players.push(guest);
-                  game.save(function (err) {
-                    if (err) {
-                      console.log('yo, there was an error adding a guest to the game database');
-                      console.log(err);
-                    } else {
-                      console.log('updated the players successfully in the game database');
-                      socket.join(data.pin, () => {
-                        socket.broadcast.to(data.pin).emit('guest-join', data);
-                      });
-                    }
-                  });
-                }
-              });
-            }
-          } else {
-            console.log('game was null');
-          }
-        }
-      });
-    } else {
-      socket.emit('no-game-found', { pin: data.pin });
-    }
-  });
-  socket.on('get-host-spotify-access-token', data => {
-    console.log("a request has been made for the host's spotify token");
-    console.log(data);
-    const room = data.pin;
-    socket.broadcast.to(room).emit('get-host-spotify-access-token', data);
-  });
-  socket.on('host-spotify-access-token', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log("got the host's spotify access token");
-    // sending access token to all clients except host
-    socket.broadcast.to(room).emit('host-spotify-access-token', { token: data.token });
-  });
-  socket.on('push-queue', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log('going to push to the queue');
-    io.in(room).emit('push-queue', { payload: data.payload, idx: data.idx });
-  });
-  socket.on('render-queue', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log('going to render the queue');
-    io.in(room).emit('render-queue');
-  });
-  socket.on('render-pool', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log('going to render the pool');
-    io.in(room).emit('render-pool');
-  });
-  socket.on('clear-queue', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log('going to clear the queue');
-    io.in(room).emit('clear-queue');
-  });
-  socket.on('remove-track-from-queue', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log('going to remove a track from the queue');
-    io.in(room).emit('remove-track-from-queue', { track: data.track });
-  });
-  socket.on('remove-track-from-pool', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log('going to remove a track from the pool');
-    io.in(room).emit('remove-track-from-pool', { track: data.track });
-  });
-  socket.on('update-snackbar', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log('going to update the snackbar');
-    io.in(room).emit('update-snackbar', data.message);
-  });
-  socket.on('update-now-playing', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log('going to update the now playing info');
-    io.in(room).emit('update-now-playing', data);
-  });
-  socket.on('get-now-playing', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log('going to send the now playing info');
-    io.in(room).emit('get-now-playing', data);
-  });
-  socket.on('play', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log('changed to play state');
-    io.in(room).emit('play');
-  });
-  socket.on('pause', data => {
-    console.log(data);
-    const room = data.pin;
-    console.log('changed to pause state');
-    io.in(room).emit('pause');
-  });
-
-});
+io.on('connection', ioEventsHandler);
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -423,8 +45,8 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // Handle Sessions
 app.use(session({
   secret: 'secret',
-  saveUninitialized: true, // should this be false?
-  resave: true // should this be false?
+  saveUninitialized: true,
+  resave: true
 }));
 
 // Passport
@@ -464,10 +86,10 @@ app.get('*', function (req, res, next) {
 });
 
 // configure router for app
-app.use('/', routes);
-app.use('/users', users);
-app.use('/host', host);
-app.use('/guest', guest);
+app.use('/', indexRoutes);
+app.use('/users', usersRoutes);
+app.use('/host', hostRoutes);
+app.use('/guest', guestRoutes);
 
 
 // catch 404 and forward to error handler

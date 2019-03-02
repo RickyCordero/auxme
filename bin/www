@@ -5,7 +5,7 @@
  */
 
 const app = require('../app');
-const debug = require('debug')('nodeauth:server');
+const debug = require('debug')('auxme');
 const http = require('http');
 
 /**
@@ -33,15 +33,7 @@ server.on('listening', onListening);
  * Socket.io
  */
 const io = app.io;
-// console.log('in www');
-// console.log('app.io (socket server) ----------------------');
-// console.log(io);
-// console.log('---------------------------------------------');
 io.attach(server);
-// console.log('app.io (socket server) ----------------------');
-// console.log(io);
-// TODO: Figure out how to fix the socket error on the front end console
-// io.listen(server);
 
 
 /**

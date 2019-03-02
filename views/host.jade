@@ -48,6 +48,7 @@ block content
 
     // Tell Socket.io client to connect to the '/' namespace
     let socketIO;
+    // TODO: This needs to be generalized
     if(window.location.hostname == 'localhost'){
       socketIO = io.connect(`${window.location.hostname}:5000/`);
     } else {
@@ -286,9 +287,8 @@ block content
       $('#playback-info').empty();
       $('#playback-info').append(playbackHtml);
 
-      $.get('/host/spotify/play', {uri: data.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
+      $.get('/host/spotify/play', {uri: data.uri, device_id: deviceId, access_token: token}, (playData) => {
         console.log(playData);
-        console.log(playStatus);
       });
       document.title = data.name;
     };
@@ -324,12 +324,12 @@ block content
     //- Listen for get-host-spotify-access-token signal from server
     socketIO.on('get-host-spotify-access-token', data => {
       console.log('handling get-host-spotify-access-token event with data:');
-      console.log('this is data.room:');
-      console.log(data.pin);
-      console.log(typeof(data.pin));
-      console.log('this is the pin:');
-      console.log(pin);
-      console.log(typeof(pin));
+      //- console.log('this is data.room:');
+      //- console.log(data.pin);
+      //- console.log(typeof(data.pin));
+      //- console.log('this is the pin:');
+      //- console.log(pin);
+      //- console.log(typeof(pin));
       if(data.pin == pin){
         console.log('sending token');
         socketIO.emit('host-spotify-access-token', {token: token, pin: pin});
@@ -637,7 +637,7 @@ block content
                             access_token: token
                           };
                           
-                          $.get('/host/spotify/play', payload, (playData, playStatus) => {
+                          $.get('/host/spotify/play', payload, (playData) => {
                             document.title = name;
                           });
                         });
@@ -701,7 +701,7 @@ block content
             if (queueData){
               const queueItem = queueData.queue[0];
               if (queueItem){
-                $.get('/host/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData, playStatus) => {
+                $.get('/host/spotify/play', {uri: queueItem.uri, device_id: deviceId, access_token: token}, (playData) => {
                   socketIO.emit('update-snackbar', {message:`Now playing ${queueItem.name}`, pin: pin});
                   socketIO.emit('update-now-playing', {artists: queueItem.artists, name:queueItem.name, uri:queueItem.uri, pin: pin});
                   document.title = queueItem.name;
@@ -717,6 +717,7 @@ block content
             socketIO.emit('render-queue', {pin: pin});
           });
         };
+
         const pushQueue = (payload, idx) => {
           $.get('/host/pushqueue', payload, (data, status) => {
             if (data.question){ // tried to update queue but got duplicate track
@@ -739,7 +740,7 @@ block content
           generatePartyCode();
         });
 
-        function selectTopVotedTrack() {
+        const selectTopVotedTrack = () => {
           return new Promise((resolve, reject)=>{
             $.get('/host/topvotedtrack', {pin: pin}, (data, status)=>{
               console.log(data.track);
@@ -752,7 +753,7 @@ block content
           });
         }
 
-        function playTrack(track){
+        const playTrack = (track) => {
           return new Promise((resolve, reject)=>{
             if(track){
               $.get('/host/spotify/play', {uri: track.uri, device_id: deviceId, access_token: token}, (_playData, _playStatus) => {

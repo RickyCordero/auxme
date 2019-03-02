@@ -8,24 +8,13 @@ function ensureAuxMeAuthenticated(req, res, next) {
     res.redirect('/users/login');
 }
 
-module.exports = function (io) {
+/* GET home page. */
+router.get('/', function (req, res, next) {
+    res.render('index');
+});
 
-    // io.on('connection', function (socket) {
-    //     console.log('a user has connected to index');
-    // });
+router.get('/join', function (req, res) {
+    res.render('join');
+});
 
-    /* GET home page. */
-    router.get('/', function (req, res, next) {
-        res.render('index');
-    });
-
-    // router.get('/members', ensureAuxMeAuthenticated, function (req, res) {
-    //     res.render('members', { title: 'Members' });
-    // });
-
-    router.get('/join', function (req, res) {
-        res.render('join');
-    });
-
-    return router;
-};
+module.exports = router;
