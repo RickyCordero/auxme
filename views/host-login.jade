@@ -1,7 +1,9 @@
 extends layout
-
+block header
+  .nav-wrapper
+      a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
+        i.material-icons.menu menu
 block content
-    h1 #{title} Area
-    //- p Welcome to the #{title} area
+    h1.unselectable #{title} Area
     #login
       a(href="/host/spotify/login" class="waves-effect btn-flat") Log in with Spotify

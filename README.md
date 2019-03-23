@@ -8,7 +8,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-Make sure Node.js, and MongoDB are installed on your system.
+Make sure Node.js (>= 8.11.3), and MongoDB (>= 4.0) are installed on your system.
 
 In order to make full use of AuxMe as a host, you will need a Spotify Premium account.
 

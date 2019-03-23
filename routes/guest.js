@@ -15,7 +15,6 @@ const spotifyApi = new SpotifyWebApi();
 
 // Mongoose models
 const Game = mongoose.model("Game");
-const Playlist = mongoose.model("Playlist");
 const Track = mongoose.model("Track");
 const Player = mongoose.model("Player");
 
@@ -23,10 +22,58 @@ router.get('/', function (req, res, next) {
     res.render('guest');
 });
 
-router.get('/displayName/:displayName/pin/:pin', function (req, res, next) {
-    const displayName = req.params.displayName;
+// guest joining a room
+router.get('/username/:username/pin/:pin', function (req, res, next) {
+    const username = req.params.username;
     const pin = req.params.pin;
-    res.render('guest', { displayName: displayName, pin: pin, env: process.env.ENVIRONMENT });
+    utils.getGameByPin(Game, pin, (err, game) => {
+        if (err) {
+            res.render('join', {
+                errors: [`no game was found with pin ${pin}`]
+            });
+            // console.log(`yo, there was an error finding the game with pin ${pin}`);
+            // console.log(err);
+        } else {
+            if (game.players.some(player => player.username == username)) {
+                res.render('join', {
+                    errors: [`there already exists a player with name ${username}`]
+                });
+                // console.log(`there already exists a player with name ${username}`);
+            } else {
+                if (game) {
+                    const guest = new Player({
+                        username: username,
+                        pin: pin,
+                        isHost: false
+                    });
+                    utils.createPlayer(guest, (err, player) => {
+                        if (err) {
+                            console.log('yo, there was an error creating a guest player');
+                        } else {
+                            console.log('created the guest player successfully');
+                            game.players.push(guest);
+                            game.save(function (err) {
+                                if (err) {
+                                    console.log('yo, there was an error adding a guest to the game database');
+                                    console.log(err);
+                                } else {
+                                    console.log('updated the players successfully in the game database');
+                                    // TODO: Figure out how to update the players
+                                    socket.join(pin, () => {
+                                        socket.broadcast.to(pin).emit('guest-join');
+                                    });
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    console.log('game was null');
+                }
+
+                res.render('guest', { username: username, pin: pin });
+            }
+        }
+    });
 });
 
 router.get('/search', function (req, res) {

@@ -1,8 +1,11 @@
 extends layout
-
+block header
+  .nav-wrapper
+      a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
+        i.material-icons.menu menu
 block content
- h2.page-header Login
- p Please login below
+ h2.page-header.unselectable Log In
+ p.unselectable Please log in below
  if errors
   each error, i in errors
    div.alert.alert-danger #{error.msg}
@@ -15,13 +18,13 @@ block content
     .input-field
       label(for='password') Password
       input.form-control(id='password' name='password', type='password')
-  input(class="waves-effect btn-flat" type='submit', name='submit',value='Login')
-  //- button(class="waves-effect btn-flat" id="loginButton") LOGIN
+  input(class="waves-effect btn-flat" type='submit', name='submit', value='Log In')
+  //- button(class="waves-effect btn-flat" id="loginButton") Log In
   //- script.
   //-   $('#loginButton').on('click', event => {
   //-       const username = $('#username').val();
   //-       const password = $('#password').val();
-  //-       //- window.location.replace(`/guest/displayName/${displayName}/pin/${pin}`);
+  //-       //- window.location.replace(`/guest/username/${username}/pin/${pin}`);
   //-       $.post('/users/login', {username: username, password:password}, (data, status)=>{
   //-         console.log(data);
   //-         console.log(status);

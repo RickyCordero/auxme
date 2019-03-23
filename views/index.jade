@@ -3,13 +3,13 @@ html(lang='en')
   head
     title auxme
     meta(content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport")
+    //- jQuery
     script(src='https://code.jquery.com/jquery-3.3.1.min.js')
     script(src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js")
     //- Bootstrap
     script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js")
     //- Async
     script(src="https://cdnjs.cloudflare.com/ajax/libs/async/2.6.1/async.js")
-
     //- Google font
     link(href='https://fonts.googleapis.com/css?family=Comfortaa', rel='stylesheet')
     //- Materlalize css
@@ -20,63 +20,31 @@ html(lang='en')
     link(href='https://fonts.googleapis.com/icon?family=Material+Icons', rel='stylesheet')
     //- Custom font face
     link(rel="stylesheet" href="/css/webfontkit/stylesheet.css" type="text/css" charset="utf-8")
-    style.
-        body {
-            background-color: #f6f6f6;
-            /*font-family: 'Comfortaa', sans-serif;*/
-            font-family: "unisanslightregular";
-        }
-        #auxme-logo{
-            font-size: 100px;
-            color: #555555;
-        }
-        #signup{
-            font-size: 25px;
-            
-            color: white;
-        }
-        #login{
-            font-size: 25px;
-        
-        }
-        #message{
-            font-size: 65px;
-            font-family: "unisanslightitalicitalic";
-            margin-top: 50px;
-        }
-        .main-content{
-            text-align: center;
-            display: flex;
-        }
-        .col{
-            margin-left: auto;
-            margin-right: auto;
-            margin-top: 25%;
-        }
-        .divider{
-            margin: auto;
-            width: 75%;
-        }
-        #signup {
-            font-family: "unisanslightregular";
-        }
-        #login {
-            font-family: "unisanslightregular";
-        }
-        #join {
-            font-family: "unisanslightregular";
-            font-size: 25px;
-        }
+    link(rel="stylesheet" href="/css/index.css" type="text/css" charset="utf-8")
+    
   body
     .main-content
         .row
             .col(style="text-align:center; width: 100")
-                #auxme-logo auxme
-                button(id="login" class="waves-effect btn-flat")
-                    a(id="login" href="/users/login") LOG IN
+                #auxme-logo.unselectable auxme
+                button(id="login" class="waves-effect btn-flat") Log In
+                //- button(id="login" class="waves-effect btn-flat")
+                //-     a(id="login" href="/users/login") LOG IN
                 .divider
-                button(id="signup" class="waves-effect btn-flat")
-                    a(href="/users/register") REGISTER
+                button(id="signup" class="waves-effect btn-flat") Sign Up
+                //- button(id="signup" class="waves-effect btn-flat")
+                //-     a(href="/users/register") Register
                 .divider
-                button(id="join" class="waves-effect btn-flat")
-                    a(id="join" href="/join") JOIN A PARTY
+                button(id="join" class="waves-effect btn-flat") Join Party
+                //- button(id="join" class="waves-effect btn-flat")
+                    a(id="join" href="/join") Join A Party
+    script.
+        $('#login').on('click', event => {
+            window.location.replace('/users/login');
+        });
+        $('#signup').on('click', event => {
+            window.location.replace('/users/signup');
+        });
+        $('#join').on('click', event => {
+            window.location.replace('/join');
+        });

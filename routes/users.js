@@ -17,12 +17,12 @@ router.get('/', function (req, res, next) {
   res.send("This route doesn't do anything yet");
 });
 
-router.get('/register', function (req, res, next) {
-  res.render('register', { title: 'Register' });
+router.get('/signup', function (req, res, next) {
+  res.render('signup', { title: 'Sign Up' });
 });
 
 router.get('/login', function (req, res, next) {
-  res.render('login', { title: 'Login' });
+  res.render('login', { title: 'Log In' });
 });
 
 router.post('/login',
@@ -62,7 +62,7 @@ passport.use(new LocalStrategy(function (username, password, done) {
   });
 }));
 
-router.post('/register', upload.single('profileimage'), function (req, res, next) {
+router.post('/signup', upload.single('profileimage'), function (req, res, next) {
   const name = req.body.name;
   const email = req.body.email;
   const username = req.body.username;
@@ -87,7 +87,7 @@ router.post('/register', upload.single('profileimage'), function (req, res, next
   const errors = req.validationErrors();
 
   if (errors) {
-    res.render('register', {
+    res.render('signup', {
       errors: errors
     });
   } else {
@@ -104,7 +104,7 @@ router.post('/register', upload.single('profileimage'), function (req, res, next
       console.log('created new user successfully');
     });
 
-    req.flash('success', 'You are now registered and can login');
+    req.flash('success', 'You are now registered and can log in');
 
     res.location('/');
     res.redirect('/users/login');
@@ -114,7 +114,7 @@ router.post('/register', upload.single('profileimage'), function (req, res, next
 router.get('/logout', function (req, res) {
   req.logout();
   req.flash('success', 'You are now logged out');
-  res.redirect('/users/login'); // Can be the homepage as well
+  res.redirect('/users/login');
 });
 
 module.exports = router;

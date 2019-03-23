@@ -3,7 +3,7 @@ const express = require('express');
 const socketIO = require('socket.io');
 const app = express();
 const io = socketIO();
-// TODO: Verify if this is needed
+
 app.io = io;
 
 // Middleware
@@ -14,12 +14,10 @@ const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
 const expressValidator = require('express-validator');
 const multer = require('multer');
 const upload = multer({ dest: './uploads' });
 const flash = require('connect-flash');
-const bcrypt = require('bcryptjs');
 
 // Express routes
 const indexRoutes = require('./routes/index');
@@ -80,6 +78,7 @@ app.use(function (req, res, next) {
   next();
 });
 
+// Get access to user model
 app.get('*', function (req, res, next) {
   res.locals.user = req.user || null;
   next();

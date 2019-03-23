@@ -1,12 +1,15 @@
 extends layout
-
+block header
+  .nav-wrapper
+      a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
+        i.material-icons.menu menu
 block content
- h2.page-header Register
- p Please register using the form below
+ h2.page-header Sign Up
+ p Please sign up using the form below
  if errors
   each error, i in errors
    div.alert.alert-danger #{error.msg}
- form(method='post', action='/users/register',enctype='multipart/form-data')
+ form(method='post', action='/users/register', enctype='multipart/form-data')
   .form-group
     .input-field
       label(for='name') Name
@@ -30,4 +33,4 @@ block content
   //- .form-group
   //-  label Profile Image
   //-  input.form-control(name='profileimage', type='file')
-  input(class="waves-effect btn-flat" type='submit', name='submit',value='Register')
+  input(class="waves-effect btn-flat" type='submit', name='submit', value='Sign Up')

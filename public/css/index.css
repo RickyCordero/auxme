@@ -1,0 +1,65 @@
+body {
+    background-color: #f6f6f6;
+    /* font-family: 'Comfortaa', sans-serif; */
+    font-family: "unisanslightregular";
+}
+
+.unselectable {
+    -webkit-user-select: none;
+    /* Safari */
+    -moz-user-select: none;
+    /* Firefox */
+    -ms-user-select: none;
+    /* IE10+/Edge */
+    user-select: none;
+    /* Standard */
+}
+
+#auxme-logo {
+    font-size: 100px;
+    color: #555555;
+}
+
+#signup {
+    font-size: 25px;
+}
+
+#login {
+    font-size: 25px;
+}
+
+#message {
+    font-size: 65px;
+    font-family: "unisanslightitalicitalic";
+    /* font-style: italic; */
+    margin-top: 50px;
+}
+
+.main-content {
+    text-align: center;
+    display: flex;
+}
+
+.col {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 25%;
+}
+
+.divider {
+    margin: auto;
+    width: 75%;
+}
+
+#signup {
+    font-family: "unisanslightregular";
+}
+
+#login {
+    font-family: "unisanslightregular";
+}
+
+#join {
+    font-family: "unisanslightregular";
+    font-size: 25px;
+}

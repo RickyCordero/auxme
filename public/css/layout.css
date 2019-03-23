@@ -1,0 +1,329 @@
+/* Scrollbar */
+
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-button {
+    width: 100px;
+    height: 100px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #e1e1e1;
+    border: 0px inset #408080;
+    border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #ffffff;
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: #c0c0c0;
+}
+
+::-webkit-scrollbar-track {
+    background: #666666;
+    border: 0px groove #ffffff;
+    border-radius: 100px;
+}
+
+::-webkit-scrollbar-track:hover {
+    background: #666666;
+}
+
+::-webkit-scrollbar-track:active {
+    background: #333333;
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+.unselectable {
+    -webkit-user-select: none;
+    /* Safari */
+    -moz-user-select: none;
+    /* Firefox */
+    -ms-user-select: none;
+    /* IE10+/Edge */
+    user-select: none;
+    /* Standard */
+}
+
+/* Host view */
+
+#players-list {}
+
+#queue-container {
+    display: flex;
+    margin: 0 auto;
+}
+
+#pool-container {
+    display: flex;
+    margin: 0 auto;
+}
+
+#queue-items {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#pool-items {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#queue-items>div {
+    background-color: #f1f1f1;
+    margin: 10px;
+    padding: 20px;
+    font-size: 30px;
+}
+
+#pool-items>div {
+    background-color: #f1f1f1;
+    margin: 10px;
+    padding: 20px;
+    font-size: 30px;
+}
+
+.card-image {
+    height: 200px;
+    width: 200px;
+    cursor: pointer;
+}
+
+.card-title-custom {
+    font-size: 12px !important;
+}
+
+.card-content-custom {
+    font-size: 20px !important;
+    width: 200px;
+}
+
+.input-field, button {
+    font-family: "unisanslightregular";
+}
+
+#playback-info {
+    text-align: center;
+}
+
+#playback-buttons {
+    text-align: center;
+    padding-bottom: 20px;
+}
+
+#playlist-container {
+    display: none;
+}
+
+#playlist-items {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#playlist-items>div {
+    background-color: #f1f1f1;
+    margin: 10px;
+    padding: 20px;
+    font-size: 30px;
+    cursor: pointer;
+}
+
+/* The snackbar - position it at the bottom and in the middle of the screen */
+
+#snackbar {
+    visibility: hidden;
+    /* Hidden by default. Visible on click */
+    min-width: 250px;
+    /* Set a default minimum width */
+    margin-left: -125px;
+    /* Divide value of min-width by 2 */
+    background-color: #333;
+    /* Black background color */
+    color: #fff;
+    /* White text color */
+    text-align: center;
+    /* Centered text */
+    border-radius: 2px;
+    /* Rounded borders */
+    padding: 16px;
+    /* Padding */
+    position: fixed;
+    /* Sit on top of the screen */
+    z-index: 2;
+    /* Add a z-index if needed */
+    left: 50%;
+    /* Center the snackbar */
+    bottom: 30px;
+    /* 30px from the bottom */
+}
+
+/* Show the snackbar when clicking on a button (class added with JavaScript) */
+
+#snackbar.show {
+    visibility: visible;
+    /* Show the snackbar
+    /* Add animation: Take 0.5 seconds to fade in and out the snackbar.
+    /* However, delay the fade out process for 2.5 seconds
+    */
+    -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+/* Animations to fade the snackbar in and out */
+
+@-webkit-keyframes fadein {
+    from {
+        bottom: 0;
+        opacity: 0;
+    }
+    to {
+        bottom: 30px;
+        opacity: 1;
+    }
+}
+
+@keyframes fadein {
+    from {
+        bottom: 0;
+        opacity: 0;
+    }
+    to {
+        bottom: 30px;
+        opacity: 1;
+    }
+}
+
+@-webkit-keyframes fadeout {
+    from {
+        bottom: 30px;
+        opacity: 1;
+    }
+    to {
+        bottom: 0;
+        opacity: 0;
+    }
+}
+
+@keyframes fadeout {
+    from {
+        bottom: 30px;
+        opacity: 1;
+    }
+    to {
+        bottom: 0;
+        opacity: 0;
+    }
+}
+
+body {
+    background-color: #f6f6f6;
+    /*font-family: 'Comfortaa', sans-serif;*/
+    font-family: "unisanslightregular";
+    color: #4a4a4a;
+}
+
+#sidenav-left {
+    background-color: #4a4a4a;
+}
+
+#auxme-logo {
+    font-size: 30px;
+    text-align: center;
+    color: white;
+    padding: 10px;
+}
+
+#main-content {}
+
+nav {
+    background-color: white;
+}
+
+header, main {
+    padding-left: 300px;
+}
+
+@media only screen and (max-width: 992px) {
+    header, main {
+        padding-left: 0;
+    }
+}
+
+i.menu {
+    color: grey;
+}
+
+i.playback {
+    color: white;
+}
+
+.page-footer {
+    background-color: #4a4a4a;
+}
+
+.sidenav li>a {
+    font-weight: normal;
+}
+
+input {
+    font-family: "unisanslightregular";
+}
+
+.btn {
+    background-color: #5f99dd;
+}
+
+.btn:hover {
+    background-color: #6ea3e1;
+}
+
+.remove {
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.vote {
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.add-to-queue {
+    font-size: 12px;
+    cursor: pointer;
+}
+
+#host-content {}
+
+.nav-wrapper {}
+
+.search {}
+
+.connected-accounts {
+    color: white;
+    text-align: left;
+    padding-left: 5px;
+}
+
+body {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+}
+
+main {
+    flex: 1 0 auto;
+}

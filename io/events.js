@@ -174,7 +174,7 @@ module.exports = socket => {
 				} else {
 					if (game) {
 						const guest = new Player({
-							username: data.displayName,
+							username: data.username,
 							socketId: socket.id,
 							pin: data.pin,
 							isHost: false
