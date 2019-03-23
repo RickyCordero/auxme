@@ -8,8 +8,6 @@ html(lang='en')
     script(src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js")
     //- Bootstrap
     script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js")
-    //- Async
-    script(src="https://cdnjs.cloudflare.com/ajax/libs/async/2.6.1/async.js")
     //- Google font
     link(href='https://fonts.googleapis.com/css?family=Comfortaa', rel='stylesheet')
     //- Materlalize css
@@ -28,16 +26,10 @@ html(lang='en')
             .col(style="text-align:center; width: 100")
                 #auxme-logo.unselectable auxme
                 button(id="login" class="waves-effect btn-flat") Log In
-                //- button(id="login" class="waves-effect btn-flat")
-                //-     a(id="login" href="/users/login") LOG IN
                 .divider
                 button(id="signup" class="waves-effect btn-flat") Sign Up
-                //- button(id="signup" class="waves-effect btn-flat")
-                //-     a(href="/users/register") Register
                 .divider
                 button(id="join" class="waves-effect btn-flat") Join Party
-                //- button(id="join" class="waves-effect btn-flat")
-                    a(id="join" href="/join") Join A Party
     script.
         $('#login').on('click', event => {
             window.location.replace('/users/login');

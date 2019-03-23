@@ -36,44 +36,65 @@ const updateSnackbar = message => {
     const snackbar = document.getElementById("snackbar");
     snackbar.className = "show";
     snackbar.innerHTML = message;
-    setTimeout(function () { snackbar.className = snackbar.className.replace('show', ""); }, 3000);
+    setTimeout(() => { snackbar.className = snackbar.className.replace('show', ""); }, 3000);
 };
 
 const updatePlayback = () => {
-    setTimeout(() => {
-        $.get('/host/spotify/playback-state', (data, status) => {
-            console.log("here's the current playback state");
-            console.log(data);
-            if (Object.keys(data.data.body).length && data.data.body.is_playing) {
-                console.log('render pause button');
-                $('#play_pause_image').text('pause');
-                // render pause button
-                socketIO.emit('pause', { pin: pin });
-            } else {
-                console.log('render play button');
-                $('#play_pause_image').text('play_arrow');
-                //- render play button
-                socketIO.emit('play', { pin: pin });
-            }
-        });
-    }, 500); // WAIT HALF A SECOND TO GET STATE
-    console.log('Play/paused!');
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            $.get('/host/spotify/playback-state', (data, status) => {
+                console.log("here's the current playback state");
+                console.log(data);
+                if (data) {
+                    if (Object.keys(data.data.body).length && data.data.body.is_playing) {
+                        console.log('render pause button');
+                        $('#play_pause_image').text('pause');
+                        // render pause button
+                        socketIO.emit('pause', { pin: pin });
+                    } else {
+                        console.log('render play button');
+                        $('#play_pause_image').text('play_arrow');
+                        // render play button
+                        socketIO.emit('play', { pin: pin });
+                    }
+                    resolve();
+                } else {
+                    reject('playback state data not found');
+                }
+            });
+        }, 500); // WAIT HALF A SECOND TO GET STATE
+        console.log('Play/paused!');
+    });
 };
 
 const removeTrackFromQueue = (track) => {
-    $.get('/host/removetrackfromqueue', { track: track, pin: pin }, (data, status) => {
-        console.log(data);
-        console.log(status);
+    return new Promise((resolve, reject) => {
+        $.get('/host/removetrackfromqueue', { track: track, pin: pin }, (queueData, queueStatus) => {
+            console.log(queueData);
+            console.log(queueStatus);
+            if (queueData) {
+                socketIO.emit('remove-track-from-queue', { track: track, pin: pin });
+                resolve();
+            } else {
+                reject('queue data not found');
+            }
+        });
     });
-    socketIO.emit('remove-track-from-queue', { track: track, pin: pin });
 };
 
 const removeTrackFromPool = (track) => {
-    $.get('/host/removetrackfrompool', { track: track, pin: pin }, (data, status) => {
-        console.log(data);
-        console.log(status);
+    return new Promise((resolve, reject) => {
+        $.get('/host/removetrackfrompool', { track: track, pin: pin }, (poolData, poolStatus) => {
+            console.log(poolData);
+            console.log(poolStatus);
+            if (poolData) {
+                socketIO.emit('remove-track-from-pool', { track: track, pin: pin });
+                resolve();
+            } else {
+                reject('pool data not found');
+            }
+        });
     });
-    socketIO.emit('remove-track-from-pool', { track: track, pin: pin });
 };
 
 const renderQueueTrack = (track, idx) => {
@@ -128,153 +149,185 @@ const renderPoolTrack = (track, idx) => {
 };
 
 const renderQueue = () => {
-    $('#queue-items').empty();
-    $.get('/host/getqueue', { pin: pin }, (queueData, queueStatus) => {
-        let g = new Promise((resolve, reject) => {
-            //- async.eachOfSeries(queueData.queue, (queueItem, queueIdx)=>{
-            async.forEachOf(queueData.queue, (queueItem, queueIdx) => {
-                renderQueueTrack(queueItem, queueIdx);
-                $(`#track_${queueIdx}`).on('click', event => {
-                    socketIO.emit('update-snackbar', { message: `Playing ${queueItem.name}`, pin: pin });
-                    socketIO.emit('update-now-playing', { artists: queueItem.artists, name: queueItem.name, uri: queueItem.uri, pin: pin });
-                });
-                $(`#remove_${queueIdx}`).on('click', event => {
-                    console.log(queueItem);
-                    removeTrackFromQueue(queueItem);
-                    $(`#queue_track_${queueIdx}`).hide('slow', function () {
-                        $(`#queue_track_${queueIdx}`).remove();
+    return new Promise((resolve, reject) => {
+        $.get('/host/getqueue', { pin: pin }, (queueData, queueStatus) => {
+            if (queueData && queueData.queue) {
+                $('#queue-items').empty();
+                async.forEachOf(queueData.queue, (queueItem, queueIdx) => {
+                    renderQueueTrack(queueItem, queueIdx);
+                    $(`#track_${queueIdx}`).on('click', event => {
+                        socketIO.emit('update-snackbar', { message: `Playing ${queueItem.name}`, pin: pin });
+                        socketIO.emit('update-now-playing', { artists: queueItem.artists, name: queueItem.name, uri: queueItem.uri, pin: pin });
                     });
+                    $(`#remove_${queueIdx}`).on('click', event => {
+                        console.log(queueItem);
+                        removeTrackFromQueue(queueItem);
+                        $(`#queue_track_${queueIdx}`).hide('slow', function () {
+                            $(`#queue_track_${queueIdx}`).remove();
+                        });
+                    });
+                }, function (err) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
                 });
-            }, function (err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(null);
-                }
-            });
-        });
-        g.then(res => {
-            //- cb(res);
+            } else {
+                reject('queue data not found');
+            }
         });
     });
 };
 
 const renderPool = () => {
-    console.log('calling renderPool');
-    $('#pool-items').empty();
-    $.get('/host/getpool', { pin: pin }, (poolData, poolStatus) => {
-        let g = new Promise((resolve, reject) => {
-            async.forEachOf(poolData.pool, (poolItem, poolIdx) => {
-                renderPoolTrack(poolItem, poolIdx);
-                //- On click remove from pool
-                $(`#pool_remove_${poolIdx}`).on('click', event => {
-                    console.log(poolItem);
-                    removeTrackFromPool(poolItem);
-                    $(`#pool_track_${poolIdx}`).hide('slow', function () {
-                        $(`#pool_track_${poolIdx}`).remove();
+    return new Promise((resolve, reject) => {
+        $.get('/host/getpool', { pin: pin }, (poolData, poolStatus) => {
+            if (poolData && poolData.pool) {
+                $('#pool-items').empty();
+                async.forEachOf(poolData.pool, (poolItem, poolIdx) => {
+                    renderPoolTrack(poolItem, poolIdx);
+                    //- On click remove from pool
+                    $(`#pool_remove_${poolIdx}`).on('click', event => {
+                        console.log(poolItem);
+                        removeTrackFromPool(poolItem);
+                        $(`#pool_track_${poolIdx}`).hide('slow', function () {
+                            $(`#pool_track_${poolIdx}`).remove();
+                        });
                     });
+                }, function (err) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
                 });
-            }, function (err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(null);
-                }
-            });
-        });
-        g.then(res => {
-            //- cb(res);
+            } else {
+                reject('pool data not found');
+            }
         });
     });
 };
 
 const generatePartyCode = () => {
-    $.get('/host/generate-party-code', (data, status) => {
-        pin = data.pin;
-        console.log('Generated party code: ' + pin);
-        updateSnackbar('Generated party code: ' + pin);
-        const partyHtml = `
-      <a id="party-code" href='#' class="waves-effect white-text">
-        Party code: ${pin}
-      </a>
-      `;
-        $('#party-code').empty();
-        $('#party-code').append(partyHtml);
-        socketIO.emit('host-join', { hostName: 'Ricky', partyName: "Ricky's party", pin: pin });
+    return new Promise((resolve, reject) => {
+        $.get('/host/generate-party-code', (data, status) => {
+            if (data.pin) {
+                pin = data.pin;
+                console.log('Generated party code: ' + pin);
+                updateSnackbar('Generated party code: ' + pin);
+                const partyHtml = `
+              <a id="party-code" href='#' class="waves-effect white-text">
+                Party code: ${pin}
+              </a>
+              `;
+                $('#party-code').empty();
+                $('#party-code').append(partyHtml);
+                socketIO.emit('host-join', { hostName: 'Ricky', partyName: "Ricky's party", pin: pin });
+                resolve();
+            } else {
+                reject('party code data not found');
+            }
+        });
     });
 };
 
 const clearQueue = () => {
-    socketIO.emit('update-snackbar', { message: `Clearing queue`, pin: pin });
-    $.get('/host/clearqueue', { pin: pin }, (data, status) => {
-        //- renderQueue();
-        socketIO.emit('render-queue', { pin: pin });
+    return new Promise((resolve, reject) => {
+        socketIO.emit('update-snackbar', { message: `Clearing queue`, pin: pin });
+        $.get('/host/clearqueue', { pin: pin }, (queueData, queueStatus) => {
+            if (queueData) {
+                socketIO.emit('render-queue', { pin: pin });
+                resolve();
+            } else {
+                reject('queue data not found');
+            }
+        });
     });
 };
 
 //- On host join via client
 socketIO.on('connect', data => {
-    generatePartyCode();
+    generatePartyCode()
+        .catch(err => console.log(err));
 });
 
 //- Listen for host-join signal from server
 socketIO.on('host-join', data => {
     console.log(data.message);
-    //- updateSnackbar(data.message);
-    renderQueue();
-    updatePlayers();
+    renderQueue()
+        .then(updatePlayers);
 });
 
 const updatePlayers = () => {
-    $.get('/host/getplayers', { pin: pin }, (data, status) => {
-        $('#player-items').empty();
-        data.players.forEach((player, playerIdx) => {
-            let playerHtml = "";
-            if (player.isHost) {
-                playerHtml = `
-          <li class="collection-item avatar" id="player_${playerIdx}">
-            <span class="title">${player.username}</span>
-            <span>[HOST]</span>
-          </li>
-          `;
+    return new Promise((resolve, reject) => {
+        $.get('/host/getplayers', { pin: pin }, (data, status) => {
+            if (data && data.players) {
+                $('#player-items').empty();
+                data.players.forEach((player, playerIdx) => {
+                    let playerHtml = "";
+                    if (player.isHost) {
+                        playerHtml = `
+                  <li class="collection-item avatar" id="player_${playerIdx}">
+                    <span class="title">${player.username}</span>
+                    <span>[HOST]</span>
+                  </li>
+                  `;
+                    } else {
+                        playerHtml = `
+                  <li class="collection-item avatar" id="player_${playerIdx}">
+                    <span class="title">${player.username}</span>
+                    <span>[GUEST]</span>
+                  </li>
+                  `;
+                    }
+                    $('#player-items').append(playerHtml);
+                });
+                resolve();
             } else {
-                playerHtml = `
-          <li class="collection-item avatar" id="player_${playerIdx}">
-            <span class="title">${player.username}</span>
-            <span>[GUEST]</span>
-          </li>
-          `;
+                reject('player data not found');
             }
-            $('#player-items').append(playerHtml);
+        });
+    })
+};
+
+const updateNowPlaying = (data) => {
+    return new Promise((resolve, reject) => {
+        console.log('going to update the now playing info using socket.io');
+        console.log(data);
+        const playbackHtml = `
+        <h5 id="now-playing-song" class="white-text">
+          ${data.name}
+        </h5>
+        <p id="now-playing-artist" class="white-text">
+          ${data.artists}
+        </p>
+        `;
+        $.get('/host/spotify/play', { uri: data.uri, device_id: deviceId, access_token: token }, (playData) => {
+            console.log(playData);
+            if (playData) {
+                $('#playback-info').empty();
+                $('#playback-info').append(playbackHtml);
+                document.title = data.name;
+                resolve();
+            } else {
+                reject('play data not found');
+            }
         });
     });
 };
 
-const updateNowPlaying = (data) => {
-    console.log('going to update the now playing info using socket.io');
-    console.log(data);
-    const playbackHtml = `
-    <h5 id="now-playing-song" class="white-text">
-      ${data.name}
-    </h5>
-    <p id="now-playing-artist" class="white-text">
-      ${data.artists}
-    </p>
-    `;
-    $('#playback-info').empty();
-    $('#playback-info').append(playbackHtml);
-
-    $.get('/host/spotify/play', { uri: data.uri, device_id: deviceId, access_token: token }, (playData) => {
-        console.log(playData);
-    });
-    document.title = data.name;
-};
-
-const getNowPlaying = (cb) => {
-    $.get('/host/now-playing', (data, status) => {
-        console.log(data);
-        cb(data, status);
-    });
+const getNowPlaying = () => {
+    return new Promise((resolve, reject) => {
+        $.get('/host/now-playing', (data, status) => {
+            console.log(data);
+            if (data) {
+                resolve(data);
+            } else {
+                reject('now playing data not found');
+            }
+        });
+    })
 };
 
 //- Listen for guest-join signal from server
@@ -301,12 +354,6 @@ socketIO.on('guest-leave', data => {
 //- Listen for get-host-spotify-access-token signal from server
 socketIO.on('get-host-spotify-access-token', data => {
     console.log('handling get-host-spotify-access-token event with data:');
-    //- console.log('this is data.room:');
-    //- console.log(data.pin);
-    //- console.log(typeof(data.pin));
-    //- console.log('this is the pin:');
-    //- console.log(pin);
-    //- console.log(typeof(pin));
     if (data.pin == pin) {
         console.log('sending token');
         socketIO.emit('host-spotify-access-token', { token: token, pin: pin });
@@ -333,7 +380,8 @@ socketIO.on('render-queue', data => {
 socketIO.on('render-pool', data => {
     console.log('going to render the pool using socket.io');
     console.log(data);
-    renderPool();
+    renderPool()
+        .catch(err => console.log(err));
 });
 
 //- Listen for clear-queue signal from server
@@ -342,31 +390,32 @@ socketIO.on('clear-queue', () => {
     clearQueue();
 });
 
-//- Listen for update-snackbar signal from server
+// Listen for update-snackbar signal from server
 socketIO.on('update-snackbar', message => {
     console.log('going to update the snackbar using socket.io');
     console.log(message);
     updateSnackbar(message);
 });
 
-//- Listen for update-now-playing signal from server
+// Listen for update-now-playing signal from server
 socketIO.on('update-now-playing', data => {
-    //- Change the now-playing track info
-    updateNowPlaying(data);
-    //- Change the playback button state
-    updatePlayback();
+    // Change the now-playing track info
+    updateNowPlaying(data)
+        // Change the playback button state
+        .then(updatePlayback);
 });
 
-//- const updateNowPlaying = () => {
+// const updateNowPlaying = () => {
 
-//- };
+// };
 
-//- Listen for get-now-playing signal from server
-//- socketIO.on('get-now-playing', data => {
-//-   getNowPlaying((status, data)=>{
-//-     socketIO.emit('update-now-playing', {artists: data.track.artists, name: data.track.name, uri: data.track.uri, pin: pin});
-//-   });
-//- });
+// // Listen for get-now-playing signal from server
+// socketIO.on('get-now-playing', _data => {
+//     getNowPlaying()
+//         .then(data => {
+//             socketIO.emit('update-now-playing', { artists: data.track.artists, name: data.track.name, uri: data.track.uri, pin: pin });
+//         });
+// });
 
 
 window.onSpotifyWebPlaybackSDKReady = () => {
@@ -674,42 +723,51 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         });
 
         const shiftQueue = () => {
-            $.get('/host/shiftqueue', { pin: pin }, (queueData, queueStatus) => {
-                if (queueData) {
-                    const queueItem = queueData.queue[0];
-                    if (queueItem) {
-                        $.get('/host/spotify/play', { uri: queueItem.uri, device_id: deviceId, access_token: token }, (playData) => {
-                            socketIO.emit('update-snackbar', { message: `Now playing ${queueItem.name}`, pin: pin });
-                            socketIO.emit('update-now-playing', { artists: queueItem.artists, name: queueItem.name, uri: queueItem.uri, pin: pin });
-                            document.title = queueItem.name;
-                        });
+            return new Promise((resolve, reject) => {
+                $.get('/host/shiftqueue', { pin: pin }, (queueData, queueStatus) => {
+                    if (queueData) {
+                        const queueItem = queueData.queue[0];
+                        if (queueItem) {
+                            $.get('/host/spotify/play', { uri: queueItem.uri, device_id: deviceId, access_token: token }, (playData) => {
+                                socketIO.emit('update-snackbar', { message: `Now playing ${queueItem.name}`, pin: pin });
+                                socketIO.emit('update-now-playing', { artists: queueItem.artists, name: queueItem.name, uri: queueItem.uri, pin: pin });
+                                document.title = queueItem.name;
+                            });
+                        } else {
+                            socketIO.emit('update-snackbar', { message: `The queue is empty`, pin: pin });
+                            socketIO.emit('update-now-playing', { artists: '', name: '', uri: '', pin: pin });
+                            document.title = "auxme";
+                        }
+                        socketIO.emit('render-queue', { pin: pin });
+                        resolve();
                     } else {
-                        socketIO.emit('update-snackbar', { message: `The queue is empty`, pin: pin });
-                        socketIO.emit('update-now-playing', { artists: '', name: '', uri: '', pin: pin });
-                        document.title = "auxme";
+                        reject('yo, there was some shiftqueue error');
                     }
-                } else {
-                    console.log('yo, there was some shiftqueue error');
-                }
-                socketIO.emit('render-queue', { pin: pin });
+                });
             });
         };
 
         const pushQueue = (payload, idx) => {
-            $.get('/host/pushqueue', payload, (data, status) => {
-                if (data.question) { // tried to update queue but got duplicate track
-                    if (confirm(data.question)) {
-                        payload.forcepush = true;
-                        pushQueue(payload, idx);
-                        socketIO.emit('render-queue', { pin: pin });
+            return new Promise((resolve, reject) => {
+                $.get('/host/pushqueue', payload, (data, status) => {
+                    if (data) {
+                        if (data.question) { // tried to update queue but got duplicate track
+                            if (confirm(data.question)) {
+                                payload.forcepush = true;
+                                pushQueue(payload, idx);
+                                socketIO.emit('render-queue', { pin: pin });
+                            } else {
+                                // user pressed cancel, queue not updated
+                            }
+                        } else { // updated queue successfully
+                            socketIO.emit('update-snackbar', { message: `Added ${payload.name} to the queue`, pin: pin });
+                            console.log(data);
+                            console.log(status);
+                        }
                     } else {
-                        //- user pressed cancel, queue not updated
+                        reject('queue data not found');
                     }
-                } else { // updated queue successfully
-                    socketIO.emit('update-snackbar', { message: `Added ${payload.name} to the queue`, pin: pin });
-                    console.log(data);
-                    console.log(status);
-                }
+                });
             });
         };
 
@@ -767,7 +825,6 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         // Ready
         player.addListener('ready', ({ device_id }) => {
             deviceId = device_id;
-            //- socketIO.emit('update-snackbar', {message:`Ready with Device ID ${device_id}`});
         });
 
 
@@ -830,7 +887,6 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                                     pin: pin
                                 };
                                 pushQueue(payload, resultIdx);
-                                //- renderQueue();
                                 socketIO.emit('render-queue', { pin: pin });
                             });
                         });

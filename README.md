@@ -1,6 +1,20 @@
-# AuxMe
+# auxme
 
-AuxMe is a party playlist curation web application
+auxme is a party playlist curation web application
+
+## Screenshots
+
+![Alt text](screenshots/index.png?raw=true "Index")
+
+![Alt text](screenshots/signup.png?raw=true "Sign up")
+
+![Alt text](screenshots/login.png?raw=true "Log in")
+
+![Alt text](screenshots/join.png?raw=true "Join")
+
+![Alt text](screenshots/search.png?raw=true "Search")
+
+![Alt text](screenshots/playlist.png?raw=true "Playlist")
 
 ## Getting Started
 
@@ -10,7 +24,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 Make sure Node.js (>= 8.11.3), and MongoDB (>= 4.0) are installed on your system.
 
-In order to make full use of AuxMe as a host, you will need a Spotify Premium account.
+In order to make full use of auxme as a host, you will need a Spotify Premium account.
 
 Head over to https://developer.spotify.com/dashboard/ to create a new Spotify app.
 
