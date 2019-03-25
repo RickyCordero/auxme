@@ -1,0 +1,34 @@
+extends layout
+block header
+    .nav-wrapper
+        a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
+            i.material-icons.menu menu
+block content
+    h2.page-header.unselectable Sign Up
+    if errors
+        each error, i in errors
+            div.alert.alert-danger.unselectable #{error.msg}
+    form(method='post', action='/host/signup')
+        .form-group.unselectable
+            .input-field
+                label(for='name') Name
+                input.form-control(autofocus id='name' name='name', type='text', value=typeof name != 'undefined' ? name : '')
+        .form-group.unselectable
+            .input-field
+                label(for='email') Email
+                input.form-control(id='email' name='email', type='email', value=typeof email != 'undefined' ? email : '' )
+        .form-group.unselectable
+            .input-field
+                label(for='username') Username
+                input.form-control(id='username' name='username', type='text', value=typeof username != 'undefined' ? username : '')
+        .form-group.unselectable
+            .input-field
+                label(for='password') Password
+                input.form-control(id='password' name='password', type='password', value=typeof password != 'undefined' ? password : '')
+        .form-group.unselectable
+            .input-field
+                label(for='password2') Confirm Password
+                input.form-control(id='password2' name='password2', type='password', value=typeof password2 != 'undefined' ? password2 : '')
+        button(class="waves-effect btn-flat" type="submit") Sign Up
+    p(class="lead mt-4 unselectable") Have an account? 
+        a(href="/host/login") Login

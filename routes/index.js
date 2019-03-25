@@ -1,20 +1,23 @@
 const express = require('express');
 const router = express.Router();
 
-function ensureAuxMeAuthenticated(req, res, next) {
-    if (req.isAuthenticated()) {
-        return next();
-    }
-    res.redirect('/users/login');
-}
+// Authorization
+const { ensureAuthenticated } = require('../config/auth');
 
-/* GET home page. */
 router.get('/', function (req, res, next) {
     res.render('index');
 });
 
-router.get('/join', function (req, res) {
-    res.render('join');
+router.get('/dashboard', ensureAuthenticated, (req, res) => {
+    // Dashboard Page
+    if (req.user && req.user.role == "host") {
+        res.redirect('/host/dashboard');
+    } else if (req.user && req.user.role == "guest") {
+        res.redirect('/guest/dashboard');
+    } else {
+        res.redirect('/');
+    }
 });
+
 
 module.exports = router;

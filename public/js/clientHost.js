@@ -187,7 +187,7 @@ const renderPool = () => {
                 $('#pool-items').empty();
                 async.forEachOf(poolData.pool, (poolItem, poolIdx) => {
                     renderPoolTrack(poolItem, poolIdx);
-                    //- On click remove from pool
+                    // On click remove from pool
                     $(`#pool_remove_${poolIdx}`).on('click', event => {
                         console.log(poolItem);
                         removeTrackFromPool(poolItem);
@@ -246,13 +246,13 @@ const clearQueue = () => {
     });
 };
 
-//- On host join via client
+// On host join via client
 socketIO.on('connect', data => {
-    generatePartyCode()
-        .catch(err => console.log(err));
+    // generatePartyCode()
+    //     .catch(err => console.log(err));
 });
 
-//- Listen for host-join signal from server
+// Listen for host-join signal from server
 socketIO.on('host-join', data => {
     console.log(data.message);
     renderQueue()
@@ -330,20 +330,20 @@ const getNowPlaying = () => {
     })
 };
 
-//- Listen for guest-join signal from server
+// Listen for guest-join signal from server
 socketIO.on('guest-join', data => {
     console.log(data);
     const message = `guest "${data.username}" has joined the room`;
     updateSnackbar(message);
-    //- socketIO.emit('host-spotify-access-token', {token: token});
-    //- $.get('/host/addplayer', {username:data.username, room: data.room, socketId: data.socketId}, (data, status) => {
-    //-   console.log(data);
-    //-   console.log(status);
-    //- });
+    // socketIO.emit('host-spotify-access-token', {token: token});
+    // $.get('/host/addplayer', {username:data.username, room: data.room, socketId: data.socketId}, (data, status) => {
+    //   console.log(data);
+    //   console.log(status);
+    // });
     updatePlayers();
 });
 
-//- Listen for guest-leave signal from server
+// Listen for guest-leave signal from server
 socketIO.on('guest-leave', data => {
     console.log(data);
     const username = data.username;
@@ -351,7 +351,7 @@ socketIO.on('guest-leave', data => {
     updatePlayers();
 });
 
-//- Listen for get-host-spotify-access-token signal from server
+// Listen for get-host-spotify-access-token signal from server
 socketIO.on('get-host-spotify-access-token', data => {
     console.log('handling get-host-spotify-access-token event with data:');
     if (data.pin == pin) {
@@ -362,21 +362,21 @@ socketIO.on('get-host-spotify-access-token', data => {
     }
 });
 
-//- Listen for render-queue signal from server
+// Listen for render-queue signal from server
 socketIO.on('push-queue', data => {
     console.log('going to push a track to the queue using socket.io');
     console.log(data);
     pushQueue(data.payload, data.idx);
 });
 
-//- Listen for render-queue signal from server
+// Listen for render-queue signal from server
 socketIO.on('render-queue', data => {
     console.log('going to render the queue using socket.io');
     console.log(data);
     renderQueue();
 });
 
-//- Listen for render-pool signal from server
+// Listen for render-pool signal from server
 socketIO.on('render-pool', data => {
     console.log('going to render the pool using socket.io');
     console.log(data);
@@ -425,20 +425,21 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         //- $.get('/spotify/all_users', function(data, status){
 
         token = data.access_token;
-        //- socketIO.emit('host-spotify-access-token', {token: data.access_token});
-        //- const tokens = data.tokens;
-        //- const token = tokens[0];
+        console.log(token);
+        // socketIO.emit('host-spotify-access-token', {token: data.access_token});
+        // const tokens = data.tokens;
+        // const token = tokens[0];
 
-        //- allUsers = data.all_users;
+        // allUsers = data.all_users;
         function getHostAccessToken() {
-            //- allUsers.forEach((user, idx)=>{
-            //-   if(user.isHost){
-            //-     return user.access_token;
-            //-   }
-            //- });
+            // allUsers.forEach((user, idx)=>{
+            //   if(user.isHost){
+            //     return user.access_token;
+            //   }
+            // });
             return token;
         }
-        //- Create only one Player with different auth tokens
+        // Create only one Player with different auth tokens
         const player = new Spotify.Player({
             name: 'auxme',
             getOAuthToken: cb => { cb(getHostAccessToken()); }
@@ -449,7 +450,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         player.addListener('authentication_error', ({ message }) => {
             // TODO: Need to test this
             console.log('yo, there was an auth error');
-            //- console.error(message);
+            // console.error(message);
             $.get('/host/spotify/refresh_token', (data, status) => {
                 token = data.token;
                 alert('got a new token:', token);
@@ -459,24 +460,24 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         player.addListener('playback_error', ({ message }) => {
             console.log('yo, there was a playback issue');
             console.log(message);
-            //- console.log('trying to start at beginning of queue');
-            //- $.get('/host/getqueue', (queueData, status)=>{
-            //-   const track = queueData.queue[0];
-            //-   socketIO.emit('update-snackbar', {message:`Playing ${track.name}`});
-            //-   socketIO.emit('update-now-playing', {artists: track.artists, name: track.name, uri: track.uri});
-            //-   const payload = {
-            //-     uri: queueData.queue[0].uri,
-            //-     device_id: deviceId,
-            //-     access_token: token
-            //-   };
+            // console.log('trying to start at beginning of queue');
+            // $.get('/host/getqueue', (queueData, status)=>{
+            //   const track = queueData.queue[0];
+            //   socketIO.emit('update-snackbar', {message:`Playing ${track.name}`});
+            //   socketIO.emit('update-now-playing', {artists: track.artists, name: track.name, uri: track.uri});
+            //   const payload = {
+            //     uri: queueData.queue[0].uri,
+            //     device_id: deviceId,
+            //     access_token: token
+            //   };
 
-            //-   $.get('/host/spotify/play', payload, (playData, playStatus) => {
-            //-     document.title = track.name;
-            //-   });
+            //   $.get('/host/spotify/play', payload, (playData, playStatus) => {
+            //     document.title = track.name;
+            //   });
 
-            //- });
+            // });
 
-            //- TODO: Determine previous playback state through current music api
+            // TODO: Determine previous playback state through current music api
 
         });
 
@@ -485,7 +486,6 @@ window.onSpotifyWebPlaybackSDKReady = () => {
             $('#pagination-between').empty();
             $('#right-pagination-arrow').empty();
             $('#pagination-container').show('slow');
-            console.log('creating the pagination');
             $.get('/host/spotify/mytracks', { limit: limit, offset: offset }, (data, status) => {
                 const leftArrowHtml = `
             <a href="#!">
@@ -505,7 +505,6 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                 $('#right-pagination-arrow').append(rightArrowHtml);
                 const totalTracks = data.total;
                 const pages = Math.ceil(totalTracks / limit);
-                console.log('pages: ', pages);
                 for (let i = 1; i <= pages; i++) {
                     const pagesHtml = `
             <li id="page-${i}" class="waves-effect page">
@@ -708,7 +707,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                                 });
                             });
                         } else {
-                            //- TODO: Determine what to render as html instead of nothing!
+                            // TODO: Determine what to render as html instead of nothing!
                             console.log('yo, the playlist has no images');
                         }
                     });
@@ -716,7 +715,6 @@ window.onSpotifyWebPlaybackSDKReady = () => {
             }
             $("#playlist-container").slideToggle(speed);
         });
-        //- socket.emit('render-queue');
 
         $('#clearqueue').on('click', event => {
             socketIO.emit('clear-queue', { pin: pin });
@@ -771,10 +769,6 @@ window.onSpotifyWebPlaybackSDKReady = () => {
             });
         };
 
-        $('#generate-party-code').on('click', event => {
-            generatePartyCode();
-        });
-
         const selectTopVotedTrack = () => {
             return new Promise((resolve, reject) => {
                 $.get('/host/topvotedtrack', { pin: pin }, (data, status) => {
@@ -807,7 +801,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
             console.log(state);
             if (this.state && !this.state.paused && state.paused && state.position === 0) {
                 // track ended
-                //- shiftQueue();
+                // shiftQueue();
                 selectTopVotedTrack()
                     .then(track => {
                         console.log(track);
@@ -901,7 +895,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
 
         // Not Ready
         player.addListener('not_ready', ({ device_id }) => {
-            //- console.log('Device ID has gone offline', device_id);
+            // console.log('Device ID has gone offline', device_id);
             socketIO.emit('update-snackbar', { message: `Device ID ${device_id} has gone offline`, pin: pin });
         });
 
@@ -918,14 +912,14 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         // Previous track
         $('#previous').on('click', event => {
             player.previousTrack().then(() => {
-                //- console.log('Previous!');
+                // console.log('Previous!');
             });
         });
 
         // Next track
         $('#next').on('click', event => {
             player.nextTrack().then(() => {
-                //- console.log('Next!');
+                // console.log('Next!');
             });
         });
     });

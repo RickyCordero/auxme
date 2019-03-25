@@ -1,35 +1,38 @@
 const express = require('express');
 const request = require('request');
 const router = express.Router();
-const queryString = require('querystring');
+
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+
 const _ = require('lodash');
+const queryString = require('querystring');
 const hash = require('object-hash');
 
-const mongoose = require("mongoose");
+// Database utils
 const utils = require('../models/utils');
 
-require('../models/game');
-require('../models/playlist');
-require('../models/track');
-require('../models/player');
-require('../models/user');
+// Mongoose models
+const Game = require('../models/Game');
+const Host = require('../models/Host');
+const Track = require('../models/Track');
+const Guest = require('../models/Guest');
+
+// Authorization
+const { ensureAuthenticated, ensureHostAuthenticated, ensureSpotifyAuthenticated } = require('../config/auth');
 
 const SpotifyWebApi = require('spotify-web-api-node');
 const spotifyApi = new SpotifyWebApi();
 
-const client_id = process.env.SPOTIFY_CLIENT_ID; // Your client id
-const client_secret = process.env.SPOTIFY_CLIENT_SECRET; // Your secret
-const host_redirect_uri = process.env.SPOTIFY_HOST_REDIRECT_URI;
+const { client_id, client_secret, add_redirect_url } = require('../config/spotify');
 
-// let host_redirect_uri;
+// let redirectUrl;
 
 // if (process.env.ENVIRONMENT == 'development') {
-//     host_redirect_uri = `http://localhost:${process.env.PORT}/host/spotify/callback/`;
+//     redirectUrl = `http://localhost:${process.env.PORT}/host/spotify/callback/`;
 // } else {
-//     host_redirect_uri = `http://auxme.io/host/spotify/callback/`; // Your redirect uri
+//     redirectUrl = `http://auxme.io/host/spotify/callback/`; // Your redirect uri
 // }
-
-// console.log(host_redirect_uri);
 
 const stateKey = 'spotify_auth_state';
 
@@ -38,8 +41,8 @@ let global_refresh_token;
 
 /**
  * Generates a random string containing numbers and letters
- * @param  {number} length The length of the string
- * @return {string} The generated string
+ * @param  {number} length - The length of the string
+ * @return {string} - The generated string
  */
 const generateRandomString = function (length) {
     let text = '';
@@ -51,43 +54,44 @@ const generateRandomString = function (length) {
     return text;
 };
 
-function ensureAuxMeAuthenticated(req, res, next) {
-    if (req.isAuthenticated()) {
-        return next();
-    }
-    res.redirect('/users/login');
-}
-
-// TODO: Determine how to check if a user has signed into their Spotify account
-function ensureSpotifyAuthenticated(req, res, next) {
-    // console.log(req.cookies);
-    // const isLoggedIntoSpotify = req.cookies[stateKey];
-    const isLoggedIntoSpotify = false;
-    if (isLoggedIntoSpotify) {
-        return next();
-    }
-    res.redirect('/host/spotify-login');
-}
-
-// Mongoose models
-const Game = mongoose.model("Game");
-const Playlist = mongoose.model("Playlist");
-const Track = mongoose.model("Track");
-const Player = mongoose.model("Player");
-
-/* GET home page. */
-router.get('/', ensureSpotifyAuthenticated, function (req, res, next) {
-    // Check if spotify cookie exists
-    console.log(res.cookies);
-    res.render('host', { title: 'Spotify', access_token: global_access_token, refresh_token: global_refresh_token });
+router.get('/dashboard', ensureHostAuthenticated, (req, res, next) => {
+    res.render('hostDashboard');
 });
 
-router.get('/spotify-login', ensureAuxMeAuthenticated, function (req, res, next) {
-    // Render the spotify login page
-    res.render('host-login', { title: 'Spotify' });
+router.get('/spotify/login', passport.authenticate('spotify', {
+    scope: [
+        // Playlists
+        'playlist-read-collaborative',
+        'playlist-modify-public',
+        'playlist-read-private',
+        'playlist-modify-private',
+        // Spotify Connect
+        'user-read-currently-playing',
+        'user-modify-playback-state',
+        'user-read-playback-state',
+        // Follow
+        'user-follow-read',
+        'user-follow-modify',
+        // Users
+        'user-read-email',
+        'user-read-private',
+        'user-read-birthdate',
+        // Library
+        'user-library-read',
+        'user-library-modify',
+        // Playback
+        'app-remote-control',
+        'streaming',
+        // Listening History
+        'user-top-read',
+        'user-read-recently-played'
+    ],
+    showDialog: true
+}), (req, res) => {
+    // Request will be redirected to spotify for authentication, so this function will not be called
 });
 
-router.get('/spotify/login', ensureAuxMeAuthenticated, function (req, res, next) {
+router.get('/spotify/add', (req, res, next) => {
     const state = generateRandomString(16);
 
     // Sets cookie stateKey to state. The value parameter may be a string or object converted to JSON.
@@ -128,12 +132,23 @@ router.get('/spotify/login', ensureAuxMeAuthenticated, function (req, res, next)
             response_type: 'code',
             client_id: client_id,
             scope: scope,
-            redirect_uri: host_redirect_uri,
+            redirect_uri: add_redirect_url,
             state: state
         }));
 });
 
-router.get('/spotify/callback', ensureAuxMeAuthenticated, function (req, res, next) {
+router.get('/spotify/callback', passport.authenticate('spotify', {
+    failureRedirect: '/host/dashboard'
+}), (req, res) => {
+    console.log(req.user.spotify.accessToken);
+    console.log(req.user.spotify.refreshToken);
+    req.flash('success', 'Logged into Spotify successfully');
+    res.redirect('/host/dashboard');
+    // spotifyApi.setAccessToken(req.user.spotify.accessToken);
+    // spotifyApi.setRefreshToken(req.user.spotify.refreshToken);
+});
+
+router.get('/spotify/add/callback', function (req, res, next) {
     // your application requests refresh and access tokens
     // after checking the state parameter
     const code = req.query.code || null;
@@ -141,14 +156,14 @@ router.get('/spotify/callback', ensureAuxMeAuthenticated, function (req, res, ne
     const storedState = req.cookies ? req.cookies[stateKey] : null;
 
     if (state === null || state !== storedState) {
-        res.redirect('/host/spotify-login');
+        res.redirect('/host/accounts');
     } else {
         res.clearCookie(stateKey);
         const authOptions = {
             url: 'https://accounts.spotify.com/api/token',
             form: {
                 code: code,
-                redirect_uri: host_redirect_uri,
+                redirect_uri: add_redirect_url,
                 grant_type: 'authorization_code'
             },
             headers: {
@@ -160,23 +175,34 @@ router.get('/spotify/callback', ensureAuxMeAuthenticated, function (req, res, ne
         // get the access and refresh tokens using the resultant code from the callback response
         request.post(authOptions, function (error, response, body) {
             if (!error && response.statusCode === 200) {
+                const { access_token, refresh_token, expires_in } = body;
                 // TODO: Figure out how to store these tokens per user per session
-                global_access_token = body.access_token;
-                global_refresh_token = body.refresh_token;
-                spotifyApi.setAccessToken(body.access_token);
-                spotifyApi.setRefreshToken(body.refresh_token);
-                res.render('host', { access_token: body.access_token, refresh_token: body.refresh_token });
+                spotifyApi.setAccessToken(access_token);
+                spotifyApi.setRefreshToken(refresh_token);
+                spotifyApi.getMe().then(data => {
+                    const profile = data.body;
+                    Host.findOneAndUpdate({ email: req.user.email }, { spotify: profile }, (err, host) => {
+                        if (err) {
+                            console.log('error finding host with email ', req.user.email);
+                        } else {
+                            console.log(`found and updated the host's spotify profile`);
+                            console.log(host);
+                        }
+                    });
+                    // global_access_token = accessToken;
+                    // global_refresh_token = refreshToken;
+                    // req.user.spotify = profile;
+                })
 
+                req.flash('success', 'Added Spotify successfully');
+                res.redirect('/host/accounts');
             } else {
-                res.redirect('/#' +
-                    queryString.stringify({
-                        error: 'invalid_token'
-                    })
-                );
+                console.log(error);
+                req.flash('error_msg', 'Invalid token, Spotify not added successfully');
+                res.redirect('/host/accounts');
             }
         });
     }
-
 });
 
 router.get('/spotify/refresh_token', function (req, res) {
@@ -208,8 +234,6 @@ router.get('/spotify/mytracks', function (req, res) {
         .getMySavedTracks({ limit: limit, offset: offset })
         .then(data => {
             const total = data.body.total;
-            // console.log(data.body.items);
-            // const d = data.body.tracks.items;
             res.send({ tracks: data.body.items, total: total });
         })
         .catch(err => console.error(err));
@@ -238,13 +262,14 @@ router.get('/spotify/update_auth_token', function (req, res) {
     });
 });
 
-router.get('/spotify/access_token', function (req, res) {
+router.get('/spotify/access_token', ensureSpotifyAuthenticated, (req, res) => {
+    console.log(req.user.spotify.accessToken);
     res.send({
-        'access_token': global_access_token
+        'access_token': req.user.spotify.accessToken
     });
 });
 
-router.get('/spotify/search', ensureAuxMeAuthenticated, function (req, res) {
+router.get('/spotify/search', ensureSpotifyAuthenticated, function (req, res) {
     const searchKey = req.query.searchKey;
     const limit = req.query.limit;
     const offset = req.query.offset;
@@ -259,7 +284,7 @@ router.get('/spotify/search', ensureAuxMeAuthenticated, function (req, res) {
     }
 });
 
-router.get('/spotify/play', ensureAuxMeAuthenticated, function (req, res) {
+router.get('/spotify/play', ensureSpotifyAuthenticated, function (req, res) {
     // TODO: Use the spotify web api node library to play
     // spotifyApi.play({
     //     device_id: req.query.device_id,
@@ -286,7 +311,7 @@ router.get('/spotify/play', ensureAuxMeAuthenticated, function (req, res) {
     });
 });
 
-router.get('/pushqueue', function (req, res) {
+router.get('/pushqueue', ensureAuthenticated, function (req, res) {
     console.log('calling pushqueue');
     utils.getGameByPin(Game, req.query.pin, (err, game) => {
         if (err) {
@@ -350,7 +375,7 @@ router.get('/pushqueue', function (req, res) {
     });
 });
 
-router.get('/pushpool', function (req, res) {
+router.get('/pushpool', ensureAuthenticated, function (req, res) {
     console.log('calling pushpool');
     utils.getGameByPin(Game, req.query.pin, (err, game) => {
         if (err) {
@@ -422,7 +447,7 @@ router.get('/pushpool', function (req, res) {
     });
 });
 
-router.get('/removetrackfromqueue', ensureAuxMeAuthenticated, function (req, res) {
+router.get('/removetrackfromqueue', ensureHostAuthenticated, function (req, res) {
     console.log('calling removetrackfromqueue');
     utils.getGameByPin(Game, req.query.pin, (err, game) => {
         if (err) {
@@ -447,7 +472,7 @@ router.get('/removetrackfromqueue', ensureAuxMeAuthenticated, function (req, res
     });
 });
 
-router.get('/removetrackfrompool', ensureAuxMeAuthenticated, function (req, res) {
+router.get('/removetrackfrompool', ensureHostAuthenticated, function (req, res) {
     console.log('calling removetrackfrompool');
     utils.getGameByPin(Game, req.query.pin, (err, game) => {
         if (err) {
@@ -472,7 +497,7 @@ router.get('/removetrackfrompool', ensureAuxMeAuthenticated, function (req, res)
     });
 });
 
-router.get('/getqueue', function (req, res) {
+router.get('/getqueue', ensureAuthenticated, function (req, res) {
     // console.log('this is the query pin');
     // console.log(req.query.pin);
     console.log('calling getqueue');
@@ -490,7 +515,7 @@ router.get('/getqueue', function (req, res) {
     });
 });
 
-router.get('/getpool', function (req, res) {
+router.get('/getpool', ensureAuthenticated, function (req, res) {
     console.log('calling getpool');
     utils.getGameByPin(Game, req.query.pin, (err, game) => {
         if (err) {
@@ -506,7 +531,7 @@ router.get('/getpool', function (req, res) {
     });
 });
 
-router.get('/shiftqueue', ensureAuxMeAuthenticated, function (req, res) {
+router.get('/shiftqueue', ensureAuthenticated, function (req, res) {
     console.log('calling shiftqueue');
     utils.getGameByPin(Game, req.query.pin, (err, game) => {
         if (err) {
@@ -531,7 +556,7 @@ router.get('/shiftqueue', ensureAuxMeAuthenticated, function (req, res) {
     });
 });
 
-router.get('/topvotedtrack', function (req, res) {
+router.get('/topvotedtrack', ensureAuthenticated, function (req, res) {
     console.log('calling topvotedtrack');
     utils.getGameByPin(Game, req.query.pin, (err, game) => {
         if (err) {
@@ -565,7 +590,7 @@ router.get('/topvotedtrack', function (req, res) {
     });
 });
 
-router.get('/vote', function (req, res) {
+router.get('/vote', ensureAuthenticated, function (req, res) {
     console.log('calling vote');
     utils.getGameByPin(Game, req.query.pin, (err, game) => {
         if (err) {
@@ -622,7 +647,7 @@ router.get('/vote', function (req, res) {
     });
 });
 
-router.get('/clearqueue', ensureAuxMeAuthenticated, function (req, res) {
+router.get('/clearqueue', ensureHostAuthenticated, function (req, res) {
     console.log('calling clearqueue');
     utils.getGameByPin(Game, req.query.pin, (err, game) => {
         if (err) {
@@ -644,7 +669,7 @@ router.get('/clearqueue', ensureAuxMeAuthenticated, function (req, res) {
     });
 });
 
-router.get('/spotify/myplaylists', ensureAuxMeAuthenticated, function (req, res) {
+router.get('/spotify/myplaylists', ensureSpotifyAuthenticated, function (req, res) {
     spotifyApi
         .getUserPlaylists({ limit: 50, offset: 0 })
         .then(data => {
@@ -657,7 +682,7 @@ router.get('/spotify/myplaylists', ensureAuxMeAuthenticated, function (req, res)
         });
 });
 
-router.get('/spotify/playlist-tracks', ensureAuxMeAuthenticated, function (req, res) {
+router.get('/spotify/playlist-tracks', ensureSpotifyAuthenticated, function (req, res) {
     const playlistId = req.query.playlist_id;
     console.log(playlistId);
     spotifyApi
@@ -672,7 +697,7 @@ router.get('/spotify/playlist-tracks', ensureAuxMeAuthenticated, function (req, 
         });
 });
 
-router.get('/spotify/playback-state', ensureAuxMeAuthenticated, function (req, res) {
+router.get('/spotify/playback-state', ensureSpotifyAuthenticated, function (req, res) {
     spotifyApi
         .getMyCurrentPlaybackState()
         .then(data => {
@@ -686,7 +711,7 @@ router.get('/spotify/playback-state', ensureAuxMeAuthenticated, function (req, r
         });
 });
 
-router.get('/spotify/now-playing', ensureAuxMeAuthenticated, function (req, res) {
+router.get('/spotify/now-playing', ensureSpotifyAuthenticated, function (req, res) {
     spotifyApi
         .getMyCurrentPlayingTrack()
         .then(data => {
@@ -699,27 +724,256 @@ router.get('/spotify/now-playing', ensureAuxMeAuthenticated, function (req, res)
         });
 });
 
-router.get('/getplayers', ensureAuxMeAuthenticated, function (req, res) {
-    console.log('calling getplayers');
+router.get('/getplayers', ensureAuthenticated, function (req, res) {
     utils.getGameByPin(Game, req.query.pin, (err, game) => {
         if (err) {
             console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
             console.log(err);
         } else {
-            // console.log('here is the game:');
-            // console.log(game);
-            res.send({ players: game.players });
+            if (game) {
+                res.send({ players: game.guests });
+            } else {
+
+            }
         }
     });
 });
 
-router.get('/generate-party-code', ensureAuxMeAuthenticated, function (req, res) {
-    const pin = Math.floor(Math.random() * 90000) + 10000; // new pin for game
+router.get('/generate-party-code', ensureHostAuthenticated, function (req, res) {
+    const pin = generatePartyCode();
     res.send({ pin: pin });
 });
 
-router.get('/profile', ensureAuxMeAuthenticated, function (req, res) {
-    res.send(req.session);
+function generatePartyCode() {
+    return Math.floor(Math.random() * 90000) + 10000; // new pin for game
+}
+
+// --------------------------------------------------------------------------------------
+
+// Login page
+router.get('/login', (req, res) => {
+    res.render('hostLogin');
+});
+
+// Sign up page
+router.get('/signup', (req, res) => {
+    res.render('hostSignup');
+});
+
+// Login handler
+router.post('/login', (req, res, next) => {
+    const { email, password } = req.body;
+
+    req.checkBody('email', 'Email field is required').notEmpty();
+    req.checkBody('email', 'Email is not valid').isEmail();
+    req.checkBody('password', 'Password field is required').notEmpty();
+
+    const formErrors = req.validationErrors();
+
+    if (formErrors) {
+        res.render('hostLogin', {
+            errors: formErrors, email: email, password: password
+        });
+    } else {
+        passport.authenticate('host-login', (err, user, info) => {
+            if (err) {
+                return next(err);
+            }
+            if (!user) {
+                const loginErrors = [{ msg: "Invalid email or password" }];
+                return res.render('hostLogin', {
+                    errors: loginErrors, email: email, password: password
+                });
+            }
+
+            // Note that when using a custom callback, it becomes the application's responsibility 
+            // to establish a session (by calling req.login()) and send a response.
+            req.logIn(user, function (err) {
+                if (err)
+                    return next(err);
+
+                return res.redirect('/dashboard');
+            });
+        })(req, res, next);
+    }
+});
+
+// Logout handler
+router.get('/logout', ensureHostAuthenticated, (req, res) => {
+    req.logout();
+    req.flash('success', 'You are now logged out');
+    res.redirect('/host/login');
+});
+
+router.post('/signup', (req, res) => {
+    const { name, email, username, password, password2 } = req.body;
+
+    // Form Validator
+    req.checkBody('name', 'Name field is required').notEmpty();
+    req.checkBody('email', 'Email field is required').notEmpty();
+    req.checkBody('email', 'Email is not valid').isEmail();
+    req.checkBody('username', 'Username field is required').notEmpty();
+    req.checkBody('password', 'Password field is required').notEmpty();
+    req.checkBody('password2', 'Passwords do not match').equals(req.body.password);
+
+    // Check Errors
+    const formErrors = req.validationErrors();
+
+    if (formErrors) {
+        res.render('hostSignup', {
+            errors: formErrors, name, email, username, password, password2
+        });
+    } else {
+        // Validation passed
+        // Make sure host does not exist
+        Host.findOne({ email: email })
+            .then(host => {
+                if (host) {
+                    // Host exists
+                    const signupErrors = [{ msg: 'Email is already registered' }];
+                    res.render('hostSignup', {
+                        errors: signupErrors, name, email, username, password, password2
+                    });
+                } else {
+                    // Create new host
+                    const newHost = new Host({
+                        name: name,
+                        email: email,
+                        username: username,
+                        password: password
+                    });
+                    utils.createHost(newHost, (err, host) => {
+                        if (err) {
+                            throw err;
+                        } else {
+                            req.flash('success', 'You are now registered and can log in');
+                            res.location('/');
+                            res.redirect('/host/login');
+                        }
+                    });
+                }
+            })
+            .catch(err => console.log(err));
+    }
+});
+
+router.get('/accounts', ensureHostAuthenticated, (req, res) => {
+    res.render('accounts');
+});
+
+// Create game
+router.get('/createGame', ensureHostAuthenticated, (req, res) => {
+    res.render('createGame');
+});
+
+/**
+ * Determines if a game name is valid
+ * @param {String} name - The name to be checked
+ */
+const isValidGameName = name => {
+    return true;
+}
+
+// Create game handler
+router.post('/createGame', ensureHostAuthenticated, (req, res, next) => {
+    const hostId = req.user.email;
+    const { name } = req.body;
+    let errors = [];
+
+    // Check required fields
+    if (!name) {
+        errors.push({ msg: 'Please fill in all fields' });
+    }
+    // Check required fields
+    if (!isValidGameName(name)) {
+        errors.push({ msg: `Invalid game name '${name}'` });
+    }
+
+    if (errors.length > 0) {
+        res.render('createGame', {
+            errors, name
+        });
+    } else {
+        const pin = generatePartyCode();
+        // Validation passed
+        // Make sure game does not exist
+        Game.findOne({ pin: pin })
+            .then(game => {
+                if (game) {
+                    // Host exists
+                    errors.push({ msg: `Game with pin '${pin}' already exists` });
+                    res.render('createGame', {
+                        errors, name
+                    });
+                } else {
+                    // Create new game
+                    const g = new Game({
+                        host: hostId,
+                        name: name,
+                        pin: pin,
+                        guests: [],
+                        queue: [],
+                        pool: []
+                    });
+                    g.save()
+                        .then(game => {
+                            req.flash('success_msg', 'You have created the game successfully');
+                            res.redirect('/dashboard');
+                        })
+                        .catch(err => console.log(err));
+                }
+            })
+    }
+});
+
+// Get all games for this user
+router.get('/games', ensureHostAuthenticated, (req, res) => {
+    Game.find({ host: req.user.email })
+        .then(games => {
+            if (games) {
+                const processedGames = games.map(game => {
+                    const obj = { ..._.pick(game, ['name', 'pin', 'guests']) };
+                    obj.guests = obj.guests.map(guest => _.pick(guest, 'name'));
+                    return obj;
+                });
+                res.send(processedGames);
+            } else {
+                req.flash('error_msg', 'No games found');
+                res.redirect('/host/dashboard');
+            }
+        })
+        .catch(err => console.log(err));
+});
+
+
+router.get('/game/:pin', ensureSpotifyAuthenticated, (req, res, next) => {
+    // Find game where user is host (host must've already been created)
+    spotifyApi.setAccessToken(req.user.spotify.accessToken);
+    spotifyApi.setRefreshToken(req.user.spotify.refreshToken);
+    Game.findOne({ host: req.user.email, pin: req.params.pin })
+        .then(game => {
+            if (game) {
+                res.render('hostGame', { game: game });
+            } else {
+                console.log('game not found');
+                req.flash('error_msg', 'No game found with pin ', req.params.pin);
+                res.redirect('/host/dashboard');
+            }
+        })
+        .catch(err => console.log(err));
+});
+
+// Get all games for this user
+router.get('/deleteGame/:pin', ensureHostAuthenticated, (req, res) => {
+    // Find game where user is host (host must've already created)
+    Game.deleteOne({ host: req.user.email, pin: req.params.pin })
+        .then(stuff => {
+            console.log(stuff);
+            req.flash('success_msg', 'You have deleted the game successfully');
+            res.redirect('/dashboard');
+        })
+        .catch(err => console.log(err));
+
 });
 
 module.exports = router;

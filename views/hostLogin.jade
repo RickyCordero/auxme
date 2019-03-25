@@ -1,0 +1,24 @@
+extends layout
+block header
+    .nav-wrapper
+        a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
+            i.material-icons.menu menu
+block content
+    h2.page-header.unselectable Log In
+    if errors
+        each error, i in errors
+            div.alert.alert-danger.unselectable #{error.msg}
+    form(method='post', action='/host/login')
+        .form-group.unselectable
+            .input-field
+                label(for='username') Email
+                input.form-control(autofocus id='email' name='email', type='email', value=typeof email != 'undefined' ? email : '')
+        .form-group.unselectable
+            .input-field
+                label(for='password') Password
+                input.form-control(id='password' name='password', type='password', value=typeof password != 'undefined' ? password : '')
+        button(class="waves-effect btn-flat" type="submit") Log In
+    //- form(method='get', action='/host/spotify/login')
+    //-     button(class="waves-effect btn-flat" type="submit") Log In with Spotify
+    p(class="lead mt-4 unselectable") No account? 
+        a(href="/host/signup") Sign Up

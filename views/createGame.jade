@@ -1,0 +1,16 @@
+extends layout
+block header
+    .nav-wrapper
+        a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
+            i.material-icons.menu menu
+block content
+    h2.page-header.unselectable Create game
+    if errors
+        each error, i in errors
+            div.alert.alert-danger.unselectable #{error.msg}
+    form(method='post', action='/host/createGame')
+        .form-group.unselectable
+            .input-field
+                label(for='name') Name
+                input.form-control(autofocus id='name' name='name', type='text')
+        button(class="waves-effect btn-flat" type="submit") Create game

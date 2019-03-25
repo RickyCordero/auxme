@@ -29,4 +29,6 @@ const TrackSchema = mongoose.Schema({
 	}
 }, { usePushEach: true });
 
-mongoose.model('Track', TrackSchema);
+const Track = mongoose.model('Track', TrackSchema);
+
+module.exports = Track;

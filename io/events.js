@@ -1,24 +1,10 @@
 const socketIO = require('socket.io');
 const io = socketIO();
-const mongoose = require('mongoose');
 const utils = require('../models/utils');
 
-require('../models/game');
-require('../models/playlist');
-require('../models/track');
-require('../models/player');
-require('../models/user');
-
-const Game = mongoose.model("Game");
-const Playlist = mongoose.model("Playlist");
-const Track = mongoose.model("Track");
-const Player = mongoose.model("Player");
-const User = mongoose.model("User");
-
-mongoose.connect(process.env.MONGODB_URI, {
-	useCreateIndex: true,
-	useNewUrlParser: true
-});
+const Game = require('../models/Game');
+const Host = require('../models/Host');
+const Player = require('../models/Player');
 
 module.exports = socket => {
 
@@ -108,8 +94,6 @@ module.exports = socket => {
 					console.log('yo, there was an error creating a host player');
 				} else {
 					console.log('created the host player successfully');
-					// console.log('this is the host player object');
-					// console.log(player);
 
 					const newGame = new Game({
 						hostname: data.hostName,

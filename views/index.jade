@@ -25,18 +25,19 @@ html(lang='en')
         .row
             .col(style="text-align:center; width: 100")
                 #auxme-logo.unselectable auxme
-                button(id="login" class="waves-effect btn-flat") Log In
-                .divider
-                button(id="signup" class="waves-effect btn-flat") Sign Up
-                .divider
-                button(id="join" class="waves-effect btn-flat") Join Party
-    script.
-        $('#login').on('click', event => {
-            window.location.replace('/users/login');
-        });
-        $('#signup').on('click', event => {
-            window.location.replace('/users/signup');
-        });
-        $('#join').on('click', event => {
-            window.location.replace('/join');
-        });
+                if !req.isAuthenticated()
+                    a(href="/host/login" class="waves-effect btn-flat") Login
+                    .divider
+                    a(href="/host/signup" class="waves-effect btn-flat") Sign Up
+                    .divider
+                    a(href="/guest/join" class="waves-effect btn-flat") Join Party
+                else
+                    if req.user.role == "host"
+                        a(href="/host/dashboard" class="waves-effect btn-flat") Dashboard
+                        .divider
+                        a(href="/host/logout" class="waves-effect btn-flat") Logout
+                    else if req.user.role == "guest"
+                        a(href="/guest/" class="waves-effect btn-flat") Go to party
+                        .divider
+                        a(href="/guest/leave" class="waves-effect btn-flat") Leave
+

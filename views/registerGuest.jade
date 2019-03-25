@@ -1,0 +1,22 @@
+extends layout
+block header
+    .nav-wrapper
+        a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
+            i.material-icons.menu menu
+block content
+    h2.page-header.unselectable Register guest
+    if errors
+        each error, i in errors
+            div.alert.alert-danger.unselectable #{error.msg}
+    form(method='post', action='/guest/register')
+        .form-group.unselectable
+            .input-field
+                label(for='username') Display Name
+                input.form-control(autofocus id='username' name='username', type='text')
+        .form-group.unselectable
+            .input-field
+                label(for='password') Pin
+                input.form-control(id='pin' name='pin', type='number')
+        button(class="waves-effect btn-flat" type="submit") Register for party
+    p(class="lead mt-4 unselectable") Already signed up for a game? 
+        a(href="/guest/join") Join

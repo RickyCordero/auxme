@@ -30,38 +30,31 @@ html(lang='en')
           a(href="/")
             #auxme-logo auxme
           
-          if user
-            li(class=(title == 'Spotify' ? 'active' : ''))
-              a(id="host-link" href='#', class="waves-effect white-text") Host
-            li(class=(title == 'Party' ? 'active' : ''))
-              a(id="party-link" href='#', class="waves-effect white-text") Party
+          if req.user
+            li(class=(title == 'Dashboard' ? 'active' : ''))
+              a(id="host-link" href='/host/dashboard', class="waves-effect white-text") Dashboard
             li(id="party-code")
             li(class=(title == 'Logout' ? 'active' : ''))
-              a(id="logout-link" href='/users/logout', class="waves-effect white-text") Logout
-            
-          if !user
+              a(id="logout-link" href='/host/logout', class="waves-effect white-text") Logout
+          else
             li(class=(title == 'Log In' ? 'active' : ''))
-              a(id="login-link" href='/users/login', class="waves-effect white-text") Log In
+              a(id="login-link" href='/host/login', class="waves-effect white-text") Log In
             li(class=(title == 'Sign Up' ? 'active' : ''))
-              a(id="signup-link" href='/users/signup', class="waves-effect white-text") Sign Up
+              a(id="signup-link" href='/host/signup', class="waves-effect white-text") Sign Up
             li(class=(title == 'Join' ? 'active' : ''))
-              a(id="join-link" href='/join', class="waves-effect white-text") Join Party
+              a(id="join-link" href='/guest/register', class="waves-effect white-text") Join Party
+        
         .container
           #search-content(style="display: none;")
             #search_results.collection
           #host-view
             #host-content
-              != messages()
-                block content
+              .unselectable
+                != messages()
+              block content
           #party-view(style="display: none;")
             .container
                 block party-content
         #snackbar
     block footer
-    script.
-      //- Materialize sidenav
-      var options = {edge: 'left'};
-      document.addEventListener('DOMContentLoaded', function () {
-          var elems = document.querySelectorAll('.sidenav');
-          var instances = M.Sidenav.init(elems, options);
-      });
+    script(src="/js/sidebar.js")

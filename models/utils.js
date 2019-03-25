@@ -107,11 +107,17 @@ module.exports.comparePassword = function (candidatePassword, hash, callback) {
     });
 }
 
-module.exports.createUser = function (newUser, callback) {
-    bcrypt.genSalt(10, function (err, salt) {
-        bcrypt.hash(newUser.password, salt, function (err, hash) {
-            newUser.password = hash;
-            newUser.save(callback);
+module.exports.createHost = function (newHost, callback) {
+    bcrypt.genSalt(10, (err, salt) => {
+        bcrypt.hash(newHost.password, salt, (err, hash) => {
+            if (err) {
+                throw err;
+            } else {
+                // Set password to hash of password
+                newHost.password = hash;
+                // Save host
+                newHost.save(callback);
+            }
         });
     });
 }

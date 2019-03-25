@@ -1,5 +1,10 @@
 /* Scrollbar */
 
+*::selection {
+    background: #EE82EE;
+    color: white;
+}
+
 ::-webkit-scrollbar {
     width: 5px;
     height: 5px;

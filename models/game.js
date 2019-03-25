@@ -2,20 +2,21 @@ const mongoose = require('mongoose');
 
 // User Schema
 const GameSchema = mongoose.Schema({
-	hostname: {
-		type: String,
-		index: true
+	host: {
+		type: String
 	},
 	name: {
-		type: String
+		type: String,
+		required: true
 	},
 	pin: {
-		type: String
+		type: String,
+		required: true
 	},
-	queue: {
+	guests: {
 		type: Array
 	},
-	players: {
+	queue: {
 		type: Array
 	},
 	pool: {
@@ -23,4 +24,6 @@ const GameSchema = mongoose.Schema({
 	}
 }, { usePushEach: true });
 
-mongoose.model('Game', GameSchema);
+const Game = mongoose.model('Game', GameSchema);
+
+module.exports = Game;
