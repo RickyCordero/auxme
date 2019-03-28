@@ -149,6 +149,7 @@ const renderPoolTrack = (track, idx) => {
 };
 
 const renderQueue = () => {
+    console.log('rendering the queue');
     return new Promise((resolve, reject) => {
         $.get('/host/getqueue', { pin: pin }, (queueData, queueStatus) => {
             if (queueData && queueData.queue) {
@@ -161,10 +162,13 @@ const renderQueue = () => {
                     });
                     $(`#remove_${queueIdx}`).on('click', event => {
                         console.log(queueItem);
-                        removeTrackFromQueue(queueItem);
-                        $(`#queue_track_${queueIdx}`).hide('slow', function () {
-                            $(`#queue_track_${queueIdx}`).remove();
-                        });
+                        removeTrackFromQueue(queueItem)
+                            .then(() => {
+                                $(`#queue_track_${queueIdx}`).hide('slow', function () {
+                                    $(`#queue_track_${queueIdx}`).remove();
+                                });
+                            })
+                            .catch(err => console.log(err));
                     });
                 }, function (err) {
                     if (err) {
@@ -190,10 +194,13 @@ const renderPool = () => {
                     // On click remove from pool
                     $(`#pool_remove_${poolIdx}`).on('click', event => {
                         console.log(poolItem);
-                        removeTrackFromPool(poolItem);
-                        $(`#pool_track_${poolIdx}`).hide('slow', function () {
-                            $(`#pool_track_${poolIdx}`).remove();
-                        });
+                        removeTrackFromPool(poolItem)
+                            .then(() => {
+                                $(`#pool_track_${poolIdx}`).hide('slow', function () {
+                                    $(`#pool_track_${poolIdx}`).remove();
+                                });
+                            })
+                            .catch(err => console.log(err));
                     });
                 }, function (err) {
                     if (err) {
@@ -204,29 +211,6 @@ const renderPool = () => {
                 });
             } else {
                 reject('pool data not found');
-            }
-        });
-    });
-};
-
-const generatePartyCode = () => {
-    return new Promise((resolve, reject) => {
-        $.get('/host/generate-party-code', (data, status) => {
-            if (data.pin) {
-                pin = data.pin;
-                console.log('Generated party code: ' + pin);
-                updateSnackbar('Generated party code: ' + pin);
-                const partyHtml = `
-              <a id="party-code" href='#' class="waves-effect white-text">
-                Party code: ${pin}
-              </a>
-              `;
-                $('#party-code').empty();
-                $('#party-code').append(partyHtml);
-                socketIO.emit('host-join', { hostName: 'Ricky', partyName: "Ricky's party", pin: pin });
-                resolve();
-            } else {
-                reject('party code data not found');
             }
         });
     });
@@ -248,15 +232,14 @@ const clearQueue = () => {
 
 // On host join via client
 socketIO.on('connect', data => {
-    // generatePartyCode()
-    //     .catch(err => console.log(err));
 });
 
 // Listen for host-join signal from server
 socketIO.on('host-join', data => {
     console.log(data.message);
     renderQueue()
-        .then(updatePlayers);
+        .then(updatePlayers)
+        .catch(err => console.log(err));
 });
 
 const updatePlayers = () => {
@@ -366,14 +349,21 @@ socketIO.on('get-host-spotify-access-token', data => {
 socketIO.on('push-queue', data => {
     console.log('going to push a track to the queue using socket.io');
     console.log(data);
-    pushQueue(data.payload, data.idx);
+    pushQueue(data.payload, data.idx)
+        .then(() => {
+
+        })
+        .catch(err => {
+            console.log(err);
+        });
 });
 
 // Listen for render-queue signal from server
 socketIO.on('render-queue', data => {
     console.log('going to render the queue using socket.io');
     console.log(data);
-    renderQueue();
+    renderQueue()
+        .catch(err => console.log(err));
 });
 
 // Listen for render-pool signal from server
@@ -515,7 +505,6 @@ window.onSpotifyWebPlaybackSDKReady = () => {
             `;
                     $('#pagination-between').append(pagesHtml);
                     $(`#tracks-page-button-${i}`).on('click', event => {
-                        console.log('clicked on tracks-page button ', i);
                         $.get('/host/spotify/mytracks', { limit: limit, offset: limit * (i - 1) }, (data, status) => {
                             console.log(data);
                             renderSavedTracks(data);
@@ -586,9 +575,12 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                         imageUrl: track.album.images[1].url,
                         pin: pin
                     };
-                    pushQueue(payload, resultIdx);
-                    //- renderQueue();
-                    socketIO.emit('render-queue', { pin: pin });
+                    pushQueue(payload, resultIdx)
+                        .then(() => {
+                            //- renderQueue();
+                            socketIO.emit('render-queue', { pin: pin });
+                        })
+                        .catch(err => console.log(err));
                 });
             });
         };
@@ -677,8 +669,11 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                                                 imageUrl: track.album.images[1].url,
                                                 pin: pin
                                             };
-                                            pushQueue(payload, trackIdx);
-                                            socketIO.emit('render-queue', { pin: pin });
+                                            pushQueue(payload, trackIdx)
+                                                .then(() => {
+                                                    socketIO.emit('render-queue', { pin: pin });
+                                                })
+                                                .catch(err => console.log(err));
                                         });
                                     });
                                 });
@@ -701,7 +696,12 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                                             imageUrl: track.album.images[1].url,
                                             pin: pin
                                         };
-                                        pushQueue(payload, trackIdx);
+                                        pushQueue(payload, trackIdx)
+                                            .then(() => {
+
+                                            })
+                                            .catch(err => console.log(err));
+
                                     });
                                     socketIO.emit('render-queue', { pin: pin });
                                 });
@@ -752,8 +752,13 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                         if (data.question) { // tried to update queue but got duplicate track
                             if (confirm(data.question)) {
                                 payload.forcepush = true;
-                                pushQueue(payload, idx);
-                                socketIO.emit('render-queue', { pin: pin });
+                                pushQueue(payload, idx)
+                                    .then(() => {
+                                        socketIO.emit('render-queue', { pin: pin });
+                                    })
+                                    .catch(err => {
+                                        console.log(err);
+                                    });
                             } else {
                                 // user pressed cancel, queue not updated
                             }
@@ -803,14 +808,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                 // track ended
                 // shiftQueue();
                 selectTopVotedTrack()
-                    .then(track => {
-                        console.log(track);
-                        playTrack(track)
-                            .then(res => {
-                                console.log(res);
-                            })
-                            .catch(err => console.log(err));
-                    })
+                    .then(playTrack(track))
                     .catch(err => console.log(err));
             }
             this.state = state;
@@ -880,8 +878,11 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                                     imageUrl: result.album.images[1].url,
                                     pin: pin
                                 };
-                                pushQueue(payload, resultIdx);
-                                socketIO.emit('render-queue', { pin: pin });
+                                pushQueue(payload, resultIdx)
+                                    .then(() => {
+                                        socketIO.emit('render-queue', { pin: pin });
+                                    })
+                                    .catch(err => console.log(err));
                             });
                         });
                     }, 5);
@@ -904,9 +905,9 @@ window.onSpotifyWebPlaybackSDKReady = () => {
 
         // Pause
         $('#play_pause').on('click', event => {
-            player.togglePlay().then(() => {
-                updatePlayback();
-            });
+            player.togglePlay()
+                .then(updatePlayback)
+                .catch(err => console.log(err));
         });
 
         // Previous track

@@ -2,7 +2,7 @@ module.exports = {
     ensureSpotifyAuthenticated: function (req, res, next) {
         // TODO: Determine how to check if a user has signed into their Spotify account
         // const spotifyAuthenticated = req.user.spotifyAuthenticated;
-        const spotifyAuthenticated = req.user.spotify.accessToken != null;
+        const spotifyAuthenticated = req.user.spotify && req.user.spotify.accessToken != null;
         if (req.isAuthenticated() && req.user.role == "host" && spotifyAuthenticated) {
             return next();
         }

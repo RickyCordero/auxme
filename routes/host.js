@@ -189,9 +189,6 @@ router.get('/spotify/add/callback', function (req, res, next) {
                             console.log(host);
                         }
                     });
-                    // global_access_token = accessToken;
-                    // global_refresh_token = refreshToken;
-                    // req.user.spotify = profile;
                 })
 
                 req.flash('success', 'Added Spotify successfully');
@@ -737,11 +734,6 @@ router.get('/getplayers', ensureAuthenticated, function (req, res) {
             }
         }
     });
-});
-
-router.get('/generate-party-code', ensureHostAuthenticated, function (req, res) {
-    const pin = generatePartyCode();
-    res.send({ pin: pin });
 });
 
 function generatePartyCode() {

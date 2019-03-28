@@ -9,6 +9,7 @@ block content
     a(href="/host/createGame" class="waves-effect btn-flat") Create game
     if !req.user.spotify
         a(href="/host/accounts" class="waves-effect btn-flat") Add accounts
-    if !req.user.spotify.accessToken
-        a(href="/host/spotify/login" class="waves-effect btn-flat") Log in to Spotify
+    else
+        if !req.user.spotify.accessToken
+            a(href="/host/spotify/login" class="waves-effect btn-flat") Log in to Spotify
     script(src="/js/hostDashboard.js")
