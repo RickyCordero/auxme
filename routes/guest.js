@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
+const passport = require('passport');
+
 // Database utils
 const utils = require('../models/utils');
 
@@ -16,12 +18,12 @@ const Guest = require('../models/Guest');
 
 // guest join page
 router.get('/join', function (req, res) {
-    res.render('joinGuest');
+    res.render('guestJoin');
 });
 
 // guest register page
-router.get('/register', (req, res) => {
-    res.render('registerGuest');
+router.get('/signup', (req, res) => {
+    res.render('guestSignup');
 });
 
 // // guest joining a room
@@ -78,27 +80,44 @@ router.get('/register', (req, res) => {
 //     });
 // });
 
-router.post('/register', (req, res) => {
+function isValidName(name) {
+    // Make sure it 
+    return true;
+}
+
+function isValidPin(pin) {
+    // 
+    return true;
+}
+
+router.post('/signup', (req, res) => {
     const { name, pin } = req.body;
-    let errors = [];
 
-    // Check required fields
-    if (!name || !pin) {
-        errors.push({ msg: 'Please fill in all fields' });
-    }
-    // Check required fields
-    if (!isValidName(name)) {
-        errors.push({ msg: 'Invalid name' });
-    }
-    // Check required fields
-    if (!isValidPin(pin)) {
-        errors.push({ msg: 'Invalid pin' });
-    }
+    // Form Validator
+    req.checkBody('name', 'Name field is required').notEmpty();
+    req.checkBody('pin', 'Pin field is required').notEmpty();
 
-    if (errors.length > 0) {
-        res.render('registerGuest', {
-            errors, name, pin
+    // TODO: Sanitize name and pin fields
+    // Check required fields
+    // if (!isValidName(name)) {
+    //     errors.push({ msg: 'Invalid name' });
+    // }
+    // // Check required fields
+    // if (!isValidPin(pin)) {
+    //     errors.push({ msg: 'Invalid pin' });
+    // }
+
+    // Check Errors
+    const formErrors = req.validationErrors();
+
+    if (formErrors) {
+        res.render('guestSignup', {
+            errors: formErrors
         });
+        // if (errors.length > 0) {
+        //     res.render('guestSignup', {
+        //         errors, name, pin
+        //     });
     } else {
         // Initial validation passed
         // Make sure user does not exist
@@ -108,9 +127,9 @@ router.post('/register', (req, res) => {
                     const match = game.guests.find(guest => guest.name == name);
                     if (match) {
                         // Other user exists with name
-                        errors.push({ msg: `Name '${name}' already taken in game with pin '${pin}'` });
-                        res.render('registerGuest', {
-                            errors, name, pin
+                        const signupErrors = [{ msg: `Name '${name}' already taken in game with pin '${pin}'` }]
+                        res.render('guestSignup', {
+                            errors: signupErrors, name, pin
                         });
                     } else {
                         const newGuest = new Guest({
@@ -130,9 +149,9 @@ router.post('/register', (req, res) => {
                             .catch(err => console.log(err));
                     }
                 } else {
-                    errors.push({ msg: `Game with pin '${pin}' not found` });
-                    res.render('registerGuest', {
-                        errors, name, pin
+                    const pinError = { msg: `Game with pin '${pin}' not found` };
+                    res.render('guestSignup', {
+                        errors: pinError, name, pin
                     });
                 }
             })

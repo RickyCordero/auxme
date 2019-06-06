@@ -4,11 +4,11 @@ block header
         a(href='#', data-target='sidenav-left', class="button-collapse sidenav-trigger")
             i.material-icons.menu menu
 block content
-    h2.page-header.unselectable Register guest
+    h2.page-header.unselectable Join a Party
     if errors
         each error, i in errors
             div.alert.alert-danger.unselectable #{error.msg}
-    form(method='post', action='/guest/register')
+    form(method='post', action='/guest/join')
         .form-group.unselectable
             .input-field
                 label(for='username') Display Name
@@ -17,6 +17,6 @@ block content
             .input-field
                 label(for='password') Pin
                 input.form-control(id='pin' name='pin', type='number')
-        button(class="waves-effect btn-flat" type="submit") Register for party
-    p(class="lead mt-4 unselectable") Already signed up for a game? 
-        a(href="/guest/join") Join
+        button(class="waves-effect btn-flat" type="submit") Join party
+    p(class="lead mt-4 unselectable") No guest account? 
+        a(href="/guest/signup") Sign up for a game

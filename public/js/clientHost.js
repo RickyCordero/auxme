@@ -149,12 +149,13 @@ const renderPoolTrack = (track, idx) => {
 };
 
 const renderQueue = () => {
-    console.log('rendering the queue');
     return new Promise((resolve, reject) => {
+        console.log('rendering the queue');
         $.get('/host/getqueue', { pin: pin }, (queueData, queueStatus) => {
             if (queueData && queueData.queue) {
                 $('#queue-items').empty();
-                async.forEachOf(queueData.queue, (queueItem, queueIdx) => {
+                async.forEachOf(queueData.queue, (queueItem, queueIdx, eachCb) => {
+
                     renderQueueTrack(queueItem, queueIdx);
                     $(`#track_${queueIdx}`).on('click', event => {
                         socketIO.emit('update-snackbar', { message: `Playing ${queueItem.name}`, pin: pin });
@@ -247,7 +248,7 @@ const updatePlayers = () => {
         $.get('/host/getplayers', { pin: pin }, (data, status) => {
             if (data && data.players) {
                 $('#player-items').empty();
-                data.players.forEach((player, playerIdx) => {
+                async.forEachOf(data.players, (player, playerIdx) => {
                     let playerHtml = "";
                     if (player.isHost) {
                         playerHtml = `
@@ -265,8 +266,13 @@ const updatePlayers = () => {
                   `;
                     }
                     $('#player-items').append(playerHtml);
+                }, (err) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
                 });
-                resolve();
             } else {
                 reject('player data not found');
             }
@@ -478,31 +484,31 @@ window.onSpotifyWebPlaybackSDKReady = () => {
             $('#pagination-container').show('slow');
             $.get('/host/spotify/mytracks', { limit: limit, offset: offset }, (data, status) => {
                 const leftArrowHtml = `
-            <a href="#!">
-              <i class="material-icons">
-                chevron_left
-              </i>
-            </a>
-          `;
+                    <a href="#!">
+                    <i class="material-icons">
+                        chevron_left
+                    </i>
+                    </a>
+                `;
                 $('#left-pagination-arrow').append(leftArrowHtml);
                 const rightArrowHtml = `
-            <a href="#!">
-              <i class="material-icons">
-                chevron_right
-              </i>
-            </a>
-          `;
+                    <a href="#!">
+                    <i class="material-icons">
+                        chevron_right
+                    </i>
+                    </a>
+                `;
                 $('#right-pagination-arrow').append(rightArrowHtml);
                 const totalTracks = data.total;
                 const pages = Math.ceil(totalTracks / limit);
                 for (let i = 1; i <= pages; i++) {
                     const pagesHtml = `
-            <li id="page-${i}" class="waves-effect page">
-              <a class="tracks-page-button" id="tracks-page-button-${i}" href="#">
-                ${i}
-              </a>
-            </li>
-            `;
+                    <li id="page-${i}" class="waves-effect page">
+                    <a class="tracks-page-button" id="tracks-page-button-${i}" href="#">
+                        ${i}
+                    </a>
+                    </li>
+                    `;
                     $('#pagination-between').append(pagesHtml);
                     $(`#tracks-page-button-${i}`).on('click', event => {
                         $.get('/host/spotify/mytracks', { limit: limit, offset: limit * (i - 1) }, (data, status) => {
@@ -529,58 +535,64 @@ window.onSpotifyWebPlaybackSDKReady = () => {
         };
 
         const renderSavedTracks = (data) => {
-            $('#track-items').empty();
-            data.tracks.forEach((item, resultIdx) => {
-                const track = item.track;
-                const artists = track.artists.map(x => x.name).join(', ');
-                const name = track.name;
-                const minutes = Math.floor(track.duration_ms / 60000);
-                let seconds = Math.round((track.duration_ms / 1000) - 60 * minutes);
-                const imageUrl = track.album.images[2].url;// 64 x 64
-                const uri = track.uri;
-                const trackCardHtml = `
-          <li class="collection-item avatar" id="track_${resultIdx}">
-            <img src="${imageUrl}" class="circle">
-            <span class="title">${name}</span>
-            <p>${artists}</p>
-            <p>Length: ${minutes}:${seconds >= 10 ? seconds : "0" + seconds}</p>
-            <a class="secondary-content waves-effect waves-light btn" id="track_${resultIdx}_add">
-              <i class="material-icons">add</i>
-            </a>
-          </li>
-          `;
-                $('#track-items').append(trackCardHtml);
+            return new Promise((resolve, reject) => {
+                $('#track-items').empty();
+                async.forEachOf(data.tracks, (item, resultIdx, eachCb) => {
+                    const track = item.track;
+                    const artists = track.artists.map(x => x.name).join(', ');
+                    const name = track.name;
+                    const minutes = Math.floor(track.duration_ms / 60000);
+                    let seconds = Math.round((track.duration_ms / 1000) - 60 * minutes);
+                    const imageUrl = track.album.images[2].url;// 64 x 64
+                    const uri = track.uri;
+                    const trackCardHtml = `
+                    <li class="collection-item avatar" id="track_${resultIdx}">
+                        <img src="${imageUrl}" class="circle">
+                        <span class="title">${name}</span>
+                        <p>${artists}</p>
+                        <p>Length: ${minutes}:${seconds >= 10 ? seconds : "0" + seconds}</p>
+                        <a class="secondary-content waves-effect waves-light btn" id="track_${resultIdx}_add">
+                        <i class="material-icons">add</i>
+                        </a>
+                    </li>
+                    `;
+                    $('#track-items').append(trackCardHtml);
 
-                $(`#track_${resultIdx}`).on('dblclick', event => {
-                    socketIO.emit('update-snackbar', { message: `Playing ${name}`, pin: pin });
-                    socketIO.emit('update-now-playing', { artists: artists, name: name, uri: uri, pin: pin });
-                    const payload = {
-                        uri: uri,
-                        device_id: deviceId,
-                        access_token: token
-                    };
-
-                    $.get('/host/spotify/play', payload, (playData, playStatus) => {
+                    $(`#track_${resultIdx}`).on('dblclick', event => {
+                        socketIO.emit('update-snackbar', { message: `Playing ${name}`, pin: pin });
+                        socketIO.emit('update-now-playing', { artists: artists, name: name, uri: uri, pin: pin });
+                        const payload = {
+                            uri: uri,
+                            device_id: deviceId,
+                            access_token: token
+                        };
+                        $.get('/host/spotify/play', payload, (playData, playStatus) => {
+                        });
+                        document.title = track.name;
                     });
-                    document.title = track.name;
-                });
 
-                $(`#track_${resultIdx}_add`).on('click', event => {
-                    const payload = {
-                        artists: artists,
-                        name: name,
-                        minutes: minutes,
-                        seconds: seconds,
-                        uri: uri,
-                        imageUrl: track.album.images[1].url,
-                        pin: pin
-                    };
-                    pushQueue(payload, resultIdx)
-                        .then(() => {
-                            //- renderQueue();
-                            socketIO.emit('render-queue', { pin: pin });
-                        })
-                        .catch(err => console.log(err));
+                    $(`#track_${resultIdx}_add`).on('click', event => {
+                        const payload = {
+                            artists: artists,
+                            name: name,
+                            minutes: minutes,
+                            seconds: seconds,
+                            uri: uri,
+                            imageUrl: track.album.images[1].url,
+                            pin: pin
+                        };
+                        pushQueue(payload, resultIdx)
+                            .then(() => {
+                                socketIO.emit('render-queue', { pin: pin });
+                            })
+                            .catch(err => console.log(err));
+                    });
+                }, (err) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
                 });
             });
         };
@@ -606,20 +618,19 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                 $.get('/host/spotify/myplaylists', (playlistData, status) => {
                     const playlists = playlistData.data.body.items;
                     playlists.forEach((playlist, playlistIdx) => {
-
                         if (playlist.images.length > 0) {
                             const playlistItemHtml = `
-                <div class="card small playlist-items">
-                  <div class="card-image playlist-image" id="playlist_${playlistIdx}">
-                    <img src="${playlist.images[0].url}">
-                  </div>
-                  <div class="card-content playlist-title">${playlist.name}</div>
-                  <div class="card-action add-to-queue" id="add-to-queue-${playlistIdx}">ADD PLAYLIST TO QUEUE</div>
-                </div>
-                `;
+                            <div class="card small playlist-items">
+                            <div class="card-image playlist-image" id="playlist_${playlistIdx}">
+                                <img src="${playlist.images[0].url}">
+                            </div>
+                            <div class="card-content playlist-title">${playlist.name}</div>
+                            <div class="card-action add-to-queue" id="add-to-queue-${playlistIdx}">ADD PLAYLIST TO QUEUE</div>
+                            </div>
+                            `;
                             $('#playlist-items').append(playlistItemHtml);
 
-                            $(`#playlist_${playlistIdx}`).on('click', function (event) {
+                            $(`#playlist_${playlistIdx}`).on('click', (event) => {
                                 $('#playlist-track-items').empty();
                                 $('#track-container').hide('slow');
                                 $.get('/host/spotify/playlist-tracks', { playlist_id: playlist.id }, (playlistTracksData, status) => {
@@ -634,16 +645,16 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                                         const imageUrl = track.album.images[2].url;// 64 x 64
                                         const uri = track.uri;
                                         const playlistTrackHtml = `
-                      <li class="collection-item avatar" id="playlist-track-${trackIdx}">
-                        <img src="${imageUrl}" class="circle">
-                        <span class="title">${name}</span>
-                        <p>${artists}</p>
-                        <p>Length: ${minutes}:${seconds >= 10 ? seconds : "0" + seconds}</p>
-                        <a class="secondary-content waves-effect waves-light btn" id="playlist-track-${trackIdx}-add">
-                          <i class="material-icons">add</i>
-                        </a>
-                      </li>
-                      `;
+                                        <li class="collection-item avatar" id="playlist-track-${trackIdx}">
+                                            <img src="${imageUrl}" class="circle">
+                                            <span class="title">${name}</span>
+                                            <p>${artists}</p>
+                                            <p>Length: ${minutes}:${seconds >= 10 ? seconds : "0" + seconds}</p>
+                                            <a class="secondary-content waves-effect waves-light btn" id="playlist-track-${trackIdx}-add">
+                                            <i class="material-icons">add</i>
+                                            </a>
+                                        </li>
+                                        `;
                                         $('#playlist-track-items').append(playlistTrackHtml);
                                         $(`#playlist-track-${trackIdx}`).on('dblclick', event => {
                                             socketIO.emit('update-snackbar', { message: `Playing ${name}`, pin: pin });
@@ -660,6 +671,9 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                                         });
 
                                         $(`#playlist-track-${trackIdx}-add`).on('click', event => {
+                                            console.log('adding playlist track to queue with payload:');
+                                            console.log(JSON.stringify(payload, null, 4));
+
                                             const payload = {
                                                 artists: artists,
                                                 name: name,
@@ -669,6 +683,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                                                 imageUrl: track.album.images[1].url,
                                                 pin: pin
                                             };
+                                            console.log(pin);
                                             pushQueue(payload, trackIdx)
                                                 .then(() => {
                                                     socketIO.emit('render-queue', { pin: pin });
@@ -755,17 +770,20 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                                 pushQueue(payload, idx)
                                     .then(() => {
                                         socketIO.emit('render-queue', { pin: pin });
+                                        resolve();
                                     })
                                     .catch(err => {
-                                        console.log(err);
+                                        reject(err);
                                     });
                             } else {
                                 // user pressed cancel, queue not updated
+                                resolve();
                             }
                         } else { // updated queue successfully
                             socketIO.emit('update-snackbar', { message: `Added ${payload.name} to the queue`, pin: pin });
                             console.log(data);
                             console.log(status);
+                            resolve();
                         }
                     } else {
                         reject('queue data not found');
@@ -842,16 +860,16 @@ window.onSpotifyWebPlaybackSDKReady = () => {
                             const imageUrl = result.album.images[2].url;// 64 x 64
                             const uri = result.uri;
                             const resultCardHtml = `
-                <li class="collection-item avatar" id="result_${resultIdx}">
-                  <img src="${imageUrl}" class="circle">
-                  <span class="title">${name}</span>
-                  <p>${artists}</p>
-                  <p>Length: ${minutes}:${seconds >= 10 ? seconds : "0" + seconds}</p>
-                  <a class="secondary-content waves-effect waves-light btn" id="result_${resultIdx}_add">
-                    <i class="material-icons">add</i>
-                  </a>
-                </li>
-                `;
+                            <li class="collection-item avatar" id="result_${resultIdx}">
+                            <img src="${imageUrl}" class="circle">
+                            <span class="title">${name}</span>
+                            <p>${artists}</p>
+                            <p>Length: ${minutes}:${seconds >= 10 ? seconds : "0" + seconds}</p>
+                            <a class="secondary-content waves-effect waves-light btn" id="result_${resultIdx}_add">
+                                <i class="material-icons">add</i>
+                            </a>
+                            </li>
+                            `;
                             $('#search_results').append(resultCardHtml);
 
                             $(`#result_${resultIdx}`).on('dblclick', event => {

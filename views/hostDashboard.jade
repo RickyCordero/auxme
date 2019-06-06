@@ -10,6 +10,6 @@ block content
     if !req.user.spotify
         a(href="/host/accounts" class="waves-effect btn-flat") Add accounts
     else
-        if !req.user.spotify.accessToken
+        if !req.user.spotify.access_token
             a(href="/host/spotify/login" class="waves-effect btn-flat") Log in to Spotify
     script(src="/js/hostDashboard.js")

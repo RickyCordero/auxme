@@ -41,7 +41,7 @@ require('./config/passport')(passport);
 const mongoose = require('mongoose');
 const MONGODB_URI = require('./config/key').MONGODB_URI;
 mongoose
-  .connect(MONGODB_URI, { useNewUrlParser: true })
+  .connect(MONGODB_URI, { useCreateIndex: true, useNewUrlParser: true })
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.log(err));
 
