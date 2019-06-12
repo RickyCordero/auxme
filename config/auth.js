@@ -4,14 +4,14 @@ const spotifyApi = new SpotifyWebApi();
 const expiredTest = (access_token, cb) => {
     // Tests if a spotify access token is expired by running a test query
     // and reporting an error to the callback
-    console.log('in the expired test function');
+    // console.log('in the expired test function');
     spotifyApi.setAccessToken(access_token);
     spotifyApi.getMe().then(data => {
-        console.log("in the expired test getMe test function");
+        // console.log("in the expired test getMe test function");
         cb(null, data);
     })
     .catch(err=>{
-        console.log('yo, there was an error in the expiredTest spotify getMe function');
+        // console.log('yo, there was an error in the expiredTest spotify getMe function');
         cb(err);
     });
 }
@@ -19,19 +19,20 @@ module.exports = {
     ensureHostSpotifyAuthenticated: function (req, res, next) {
         // Determines if a user has signed into their Spotify account and has a valid access token
         if(req.user.spotify){
-            console.log('spotify account found for user');
-            expiredTest(req.user.spotify.access_token, (err, res)=>{
+            // console.log('spotify account found for user');
+            expiredTest(req.user.spotify.access_token, (err, data)=>{
                 if (err){
                     // error
                     // req.flash('error_msg', 'Please log into Spotify');
-                    console.log("spotify access token expired, need to redirect user to spotify login");
-                    console.log(err);
+                    // console.log("spotify access token expired, need to redirect user to spotify login");
+                    // console.log(err);
+                    // next(err);
                     res.redirect('/host/spotify/add');
                 } else {
-                    console.log("spotify access token not expired, user should be redirected to original route");
-                    console.log(res); // not expired
-                    host_authenticated = req.isAuthenticated() && req.user.role == "host";
-                    console.log(host_authenticated);
+                    // console.log("spotify access token not expired, user should be redirected to original route");
+                    // console.log(data); // not expired
+                    // host_authenticated = req.isAuthenticated() && req.user.role == "host";
+                    // console.log(host_authenticated);
                     // TODO: Determine if user also needs to be signed in
                     // if (host_authenticated) {
                     //     return next();

@@ -314,66 +314,66 @@ router.get('/pushqueue', ensureAuthenticated, (req, res) => {
     console.log('calling pushqueue');
     console.log('pushing track given by query:');
     console.log(JSON.stringify(req.query, null, 4));
-    // utils.getGameByPin(Game, req.query.pin, (err, game) => {
-    //     if (err) {
-    //         console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
-    //         console.log(err);
-    //     } else {
-    //         const trackConfig = {
-    //             artists: req.query.artists,
-    //             name: req.query.name,
-    //             minutes: req.query.minutes,
-    //             seconds: req.query.seconds,
-    //             uri: req.query.uri,
-    //             imageUrl: req.query.imageUrl,
-    //             votes: 0,
-    //             votedBy: []
-    //         };
-    //         const track = new Track(trackConfig);
-    //         // console.log(game);
-    //         // console.log(typeof (game));
-    //         // if (game.queue.includes(track)) {
-    //         // console.log(game.queue);
-    //         // console.log(typeof (game.queue));
-    //         // const s = new Set(game.queue.map(item=>typeof(item)));
-    //         // console.log(s);
-    //         // console.log(track);
-    //         // console.log(typeof (track));
-    //         const hashedQueue = game.queue.map(x => hash(_.omit(x, "_id")));
-    //         // console.log("here's the hashedQueue:");
-    //         // console.log(hashedQueue);
-    //         const trackHash = hash(trackConfig);
-    //         // console.log("here's the track hash:");
-    //         // console.log(trackHash);
-    //         if (hashedQueue.includes(trackHash)) {
-    //             if (req.query.forcepush) {
-    //                 game.queue.push(track);
-    //                 game.save(function (err) {
-    //                     if (err) {
-    //                         console.log('yo, there was an error pushing queue items to the database');
-    //                         console.log(err);
-    //                     } else {
-    //                         console.log('updated the queue successfully in the database');
-    //                         res.send({ queue: game.queue });
-    //                     }
-    //                 });
-    //             } else {
-    //                 res.send({ question: "Song already in queue, are you sure you want to add?" });
-    //             }
-    //         } else {
-    //             game.queue.push(track);
-    //             game.save(function (err) {
-    //                 if (err) {
-    //                     console.log('yo, there was an error pushing queue items to the database');
-    //                     console.log(err);
-    //                 } else {
-    //                     console.log('updated the queue successfully in the database');
-    //                     res.send({ queue: game.queue });
-    //                 }
-    //             });
-    //         }
-    //     }
-    // });
+    utils.getGameByPin(Game, req.query.pin, (err, game) => {
+        if (err) {
+            console.log(`yo, there was an error finding the game with pin ${req.query.pin}`);
+            console.log(err);
+        } else {
+            const trackConfig = {
+                artists: req.query.artists,
+                name: req.query.name,
+                minutes: req.query.minutes,
+                seconds: req.query.seconds,
+                uri: req.query.uri,
+                imageUrl: req.query.imageUrl,
+                votes: 0,
+                votedBy: []
+            };
+            const track = new Track(trackConfig);
+            // console.log(game);
+            // console.log(typeof (game));
+            // if (game.queue.includes(track)) {
+            // console.log(game.queue);
+            // console.log(typeof (game.queue));
+            // const s = new Set(game.queue.map(item=>typeof(item)));
+            // console.log(s);
+            // console.log(track);
+            // console.log(typeof (track));
+            const hashedQueue = game.queue.map(x => hash(_.omit(x, "_id")));
+            // console.log("here's the hashedQueue:");
+            // console.log(hashedQueue);
+            const trackHash = hash(trackConfig);
+            // console.log("here's the track hash:");
+            // console.log(trackHash);
+            if (hashedQueue.includes(trackHash)) {
+                if (req.query.forcepush) {
+                    game.queue.push(track);
+                    game.save(function (err) {
+                        if (err) {
+                            console.log('yo, there was an error pushing queue items to the database');
+                            console.log(err);
+                        } else {
+                            console.log('updated the queue successfully in the database');
+                            res.send({ queue: game.queue });
+                        }
+                    });
+                } else {
+                    res.send({ question: "Song already in queue, are you sure you want to add?" });
+                }
+            } else {
+                game.queue.push(track);
+                game.save(function (err) {
+                    if (err) {
+                        console.log('yo, there was an error pushing queue items to the database');
+                        console.log(err);
+                    } else {
+                        console.log('updated the queue successfully in the database');
+                        res.send({ queue: game.queue });
+                    }
+                });
+            }
+        }
+    });
 });
 
 router.get('/pushpool', ensureAuthenticated, function (req, res) {
@@ -942,11 +942,41 @@ router.get('/games', ensureHostAuthenticated, (req, res) => {
         .catch(err => console.log(err));
 });
 
+router.get('/game/current', ensureHostAuthenticated, (req, res, next) => {
+    // Get the host's current active game
+    console.log('finding the current game the host is in');
+    console.log(req.user.email);
+    Host.findOne({ email: req.user.email })
+        .then(host => {
+            if (host) {
+                console.log('found the host');
+                console.log(host);
+                const pin = host.pin;
+                console.log("host's pin:");
+                console.log(pin);
+                res.send({pin: pin});
+            } else {
+                console.log('no host found');
+                next();
+            }
+        })
+        .catch(err => console.log(err));
+});
 
 router.get('/game/:pin', ensureHostSpotifyAuthenticated, (req, res, next) => {
     // Find game where user is host (host must've already been created)
     spotifyApi.setAccessToken(req.user.spotify.access_token);
     spotifyApi.setRefreshToken(req.user.spotify.refresh_token);
+    // Set host's current game pin
+    Host.findOneAndUpdate({ email: req.user.email }, { pin: req.params.pin}, (err, host) => {
+        if (err) {
+            console.log('error finding host with email ', req.user.email);
+        } else {
+            console.log(`found and updated the host's spotify profile`);
+            console.log(host);
+        }
+    });
+    // Find the game created by the host to render the game
     Game.findOne({ host: req.user.email, pin: req.params.pin })
         .then(game => {
             if (game) {

@@ -15,6 +15,9 @@ const HostSchema = mongoose.Schema({
 	password: {
 		type: String
 	},
+	pin: {
+		type: String
+	},
 	role: {
 		type: String,
 		default: "host"
@@ -22,7 +25,7 @@ const HostSchema = mongoose.Schema({
 	spotify: {
 		type: Object
 	}
-}, { usePushEach: true });
+}, { usePushEach: true, strict: false });
 
 const Host = mongoose.model('Host', HostSchema);
 

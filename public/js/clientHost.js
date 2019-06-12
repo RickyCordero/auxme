@@ -27,7 +27,10 @@ let pin;
 let socketIO;
 // TODO: This needs to be generalized
 if (window.location.hostname == 'localhost') { // development
-    socketIO = io.connect(`${window.location.hostname}:5000/`);
+    console.log('in development mode');
+    const socket_url = `${window.location.hostname}:5000/`;
+    console.log(socket_url);
+    socketIO = io.connect(socket_url);
 } else {
     socketIO = io.connect(window.location.hostname);
 }
@@ -233,11 +236,20 @@ const clearQueue = () => {
 
 // On host join via client
 socketIO.on('connect', data => {
+    console.log('in the socketIO on connect function');
+    $.get('/host/game/current', (gameData, status)=>{
+        console.log('got the game pin');
+        pin = gameData.pin;
+        const payload = {
+            pin: pin
+        }
+        socketIO.emit('host-join', payload);
+    });
 });
 
 // Listen for host-join signal from server
 socketIO.on('host-join', data => {
-    console.log(data.message);
+    updateSnackbar(data.message);
     renderQueue()
         .then(updatePlayers)
         .catch(err => console.log(err));
@@ -380,7 +392,7 @@ socketIO.on('render-pool', data => {
         .catch(err => console.log(err));
 });
 
-//- Listen for clear-queue signal from server
+// Listen for clear-queue signal from server
 socketIO.on('clear-queue', () => {
     console.log('going to clear queue using socket.io');
     clearQueue();

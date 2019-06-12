@@ -12,112 +12,13 @@ module.exports = socket => {
 	// console.log(socket.id); // socketId is the default room the socket is in
 	// console.log(io.sockets.adapter.rooms);
 	socket.on('host-join', data => {
-
-		// const removeGame = new Promise((resolve, reject) => {
-		//   console.log(socket.id);
-		//   utils.getGameByHostSocketId(Game, socket.id, (err, game) => {
-		//     if (err) {
-		//       console.log(`yo, there was an error finding the game with pin ${data.pin}`);
-		//       reject(err);
-		//     } else {
-		//       if (game) {
-		//         console.log("found a game with this host's socket id");
-		//         utils.deleteGame(game, (err) => {
-		//           if (err) {
-		//             console.log('yo, there was an error removing the existing game from the database');
-		//             reject(err);
-		//           } else {
-		//             console.log('successfully removed the game from the database');
-		//             resolve();
-		//           }
-		//         });
-		//       } else {
-		//         console.log('the game is null');
-		//         resolve();
-		//       }
-		//     }
-		//   });
-		// });
-		// removeGame.then(() => {
-		//   socket.join(data.pin, () => {
-		//     const host = new Player({
-		//       username: data.hostName,
-		//       socketId: socket.id,
-		//       pin: data.pin,
-		//       isHost: true
-		//     });
-		//     utils.createPlayer(host, (err, player) => {
-		//       if (err) {
-		//         console.log('yo, there was an error creating a host player');
-		//       } else {
-		//         console.log('created the host player successfully');
-		//         console.log('this is the host player object');
-		//         console.log(player);
-
-		//         const newGame = new Game({
-		//           hostname: data.hostName,
-		//           name: data.partyName,
-		//           pin: data.pin,
-		//           queue: [],
-		//           players: [host],
-		//           pool: []
-		//         });
-
-		//         utils.createGame(newGame, (err, game) => {
-		//           if (err) {
-		//             console.log('yo, there was an error creating a game');
-		//             console.log(err);
-		//           } else {
-		//             console.log('created the game successfully');
-		//             console.log("This is the game object:");
-		//             console.log(game);
-		//             console.log(typeof (game));
-		//             socket.broadcast.to(data.pin).emit('host-join', { message: `a host has joined a room with party code ${data.pin}` });
-		//           }
-		//         });
-		//       }
-		//     });
-		//   });
-		// }).catch(err => {
-		//   console.log("yo, there was an error in removing a game from the database");
-		//   console.log(err);
-		// });
 		socket.join(data.pin, () => {
-			const host = new Player({
-				username: data.hostName,
-				socketId: socket.id,
-				pin: data.pin,
-				isHost: true
-			});
-			utils.createPlayer(host, (err, player) => {
-				if (err) {
-					console.log('yo, there was an error creating a host player');
-				} else {
-					console.log('created the host player successfully');
-
-					const newGame = new Game({
-						hostname: data.hostName,
-						name: data.partyName,
-						pin: data.pin,
-						queue: [],
-						players: [host],
-						pool: []
-					});
-
-					utils.createGame(newGame, (err, game) => {
-						if (err) {
-							console.log('yo, there was an error creating a game');
-							console.log(err);
-						} else {
-							console.log('created the game successfully');
-							io.in(data.pin).emit('host-join', { message: `a host has joined a room with party code ${data.pin}` });
-						}
-					});
-				}
-			});
+			// console.log(data);
+			// console.log(`host joined room ${data.pin}`);
+			// io.in(data.pin).emit('host-join', { message: `a host has joined a room with party code ${data.pin}` });
+			// io.emit('host-join', { message: `a host has joined a room with party code ${data.pin}` });
+			socket.emit('host-join', { message: `a host has joined a room with party code ${data.pin}` });
 		});
-
-
 	});
 	// socket.on('disconnect', _data => {
 	//   console.log(_data);
@@ -213,67 +114,77 @@ module.exports = socket => {
 		// console.log(data);
 		const room = data.pin;
 		console.log('going to push to the queue');
-		io.in(room).emit('push-queue', { payload: data.payload, idx: data.idx });
+		// io.in(room).emit('push-queue', { payload: data.payload, idx: data.idx });
+		socket.emit('push-queue', { payload: data.payload, idx: data.idx });
 	});
 	socket.on('render-queue', data => {
 		// console.log(data);
 		const room = data.pin;
 		console.log('going to render the queue');
-		io.in(room).emit('render-queue');
+		// io.in(room).emit('render-queue');
+		socket.emit('render-queue');
 	});
 	socket.on('render-pool', data => {
 		// console.log(data);
 		const room = data.pin;
 		console.log('going to render the pool');
-		io.in(room).emit('render-pool');
+		// io.in(room).emit('render-pool');
+		socket.emit('render-pool');
 	});
 	socket.on('clear-queue', data => {
 		// console.log(data);
 		const room = data.pin;
 		console.log('going to clear the queue');
-		io.in(room).emit('clear-queue');
+		// io.in(room).emit('clear-queue');
+		socket.emit('clear-queue');
 	});
 	socket.on('remove-track-from-queue', data => {
 		// console.log(data);
 		const room = data.pin;
 		console.log('going to remove a track from the queue');
-		io.in(room).emit('remove-track-from-queue', { track: data.track });
+		socket.emit('remove-track-from-queue', { track: data.track });
 	});
 	socket.on('remove-track-from-pool', data => {
 		// console.log(data);
 		const room = data.pin;
 		console.log('going to remove a track from the pool');
-		io.in(room).emit('remove-track-from-pool', { track: data.track });
+		// io.in(room).emit('remove-track-from-pool', { track: data.track });
+		socket.emit('remove-track-from-pool', { track: data.track });
 	});
 	socket.on('update-snackbar', data => {
-		// console.log(data);
+		console.log(data);
 		const room = data.pin;
-		// console.log('going to update the snackbar');
-		io.in(room).emit('update-snackbar', data.message);
+		console.log('going to update the snackbar');
+		// io.in(room).emit('update-snackbar', data.message);
+		socket.emit('update-snackbar', data.message);
 	});
 	socket.on('update-now-playing', data => {
 		// console.log(data);
 		const room = data.pin;
 		// console.log('going to update the now playing info');
-		io.in(room).emit('update-now-playing', data);
+		// io.in(room).emit('update-now-playing', data);
+		socket.emit('update-now-playing', data);
 	});
 	socket.on('get-now-playing', data => {
 		// console.log(data);
 		const room = data.pin;
 		console.log('going to send the now playing info');
-		io.in(room).emit('get-now-playing', data);
+		// io.in(room).emit('get-now-playing', data);
+		socket.emit('get-now-playing', data);
 	});
 	socket.on('play', data => {
 		// console.log(data);
 		const room = data.pin;
 		console.log('changed to play state');
-		io.in(room).emit('play');
+		// io.in(room).emit('play');
+		socket.emit('play');
 	});
 	socket.on('pause', data => {
 		// console.log(data);
 		const room = data.pin;
 		console.log('changed to pause state');
-		io.in(room).emit('pause');
+		// io.in(room).emit('pause');
+		socket.emit('pause');
 	});
 
 }
